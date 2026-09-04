@@ -7,6 +7,11 @@ type Result = {
   risk_level: string;
   reason: string;
   approval_id: string | null;
+  executed?: boolean;
+  tool?: string;
+  operation?: string;
+  execution_id?: string | null;
+  result?: Record<string, unknown> | null;
 };
 
 export default function Playground() {
@@ -15,6 +20,7 @@ export default function Playground() {
   const [action, setAction] = useState("SEND");
   const [scope, setScope] = useState("external");
   const [destination, setDestination] = useState("external");
+  const [viaGateway, setViaGateway] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState("");
 
@@ -23,18 +29,24 @@ export default function Playground() {
     setError("");
     setResult(null);
     try {
-      const res = await fetch("/api/authorize", {
+      const url = viaGateway
+        ? `/api/gateway/tools/${resource}/${action.toLowerCase()}`
+        : "/api/authorize";
+      const payload = viaGateway
+        ? { scope, destination: destination || null }
+        : {
+            resource_kind: resource,
+            action,
+            scope,
+            destination: destination || null,
+          };
+      const res = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "X-Agent-Token": token,
         },
-        body: JSON.stringify({
-          resource_kind: resource,
-          action,
-          scope,
-          destination: destination || null,
-        }),
+        body: JSON.stringify(payload),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.detail || res.statusText);
@@ -47,7 +59,7 @@ export default function Playground() {
   return (
     <>
       <h2 className="page-title">Authorize</h2>
-      <p className="page-sub">Simulate a tool call. Contract: Agent → Tool Request → Runtime Engine → ALLOW / APPROVAL / BLOCK → Evidence.</p>
+      <p className="page-sub">Agent uses an Aegis token. Gateway forwards to the protected tool only on ALLOW.</p>
       <div className="card">
         <form onSubmit={submit} className="grid" style={{ gap: 10, maxWidth: 560 }}>
           <label className="field">
@@ -60,7 +72,11 @@ export default function Playground() {
             <input value={scope} onChange={(e) => setScope(e.target.value)} />
             <input value={destination} onChange={(e) => setDestination(e.target.value)} />
           </div>
-          <button className="btn" type="submit">Evaluate</button>
+          <label className="field">
+            <input type="checkbox" checked={viaGateway} onChange={(e) => setViaGateway(e.target.checked)} />
+            Send through enforcement gateway
+          </label>
+          <button className="btn" type="submit">{viaGateway ? "Invoke tool" : "Evaluate"}</button>
         </form>
         {error && <p className="flash">{error}</p>}
         {result && (
@@ -70,6 +86,12 @@ export default function Playground() {
             <p>{result.reason}</p>
             <div className="mono">request {result.request_id}</div>
             {result.approval_id && <div className="mono">approval {result.approval_id}</div>}
+            {result.execution_id && <div className="mono">execution {result.execution_id}</div>}
+            {viaGateway && (
+              <div className="mono">
+                tool {result.tool}.{result.operation} executed={String(result.executed)}
+              </div>
+            )}
           </div>
         )}
       </div>

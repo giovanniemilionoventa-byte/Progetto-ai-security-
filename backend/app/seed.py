@@ -217,3 +217,65 @@ def seed_if_empty(db: Session) -> None:
     db.commit()
     print(f"[aegis] seeded org=acme user={DEMO_EMAIL} password={DEMO_PASSWORD}")
     print(f"[aegis] sales copilot token written to /tmp/aegis_demo_token.txt")
+
+
+BUILTIN_PATTERNS = [
+    {
+        "name": "CRM read then files export then external email",
+        "description": "SEQUENCE: CRM READ followed by FILES EXPORT followed by EMAIL SEND external.",
+        "type": "SEQUENCE",
+        "severity": "high",
+        "definition": {
+            "steps": [
+                {"resource_kind": "crm", "action": "READ"},
+                {"resource_kind": "files", "action": "EXPORT"},
+                {
+                    "resource_kind": "email",
+                    "action": "SEND",
+                    "scope": "external",
+                },
+            ]
+        },
+    },
+    {
+        "name": "Repeated external email send",
+        "description": "THRESHOLD: multiple EMAIL SEND to external destinations in one execution.",
+        "type": "THRESHOLD",
+        "severity": "medium",
+        "definition": {
+            "resource_kind": "email",
+            "action": "SEND",
+            "scope": "external",
+            "count": 5,
+        },
+    },
+]
+
+
+def seed_builtin_patterns(db: Session) -> None:
+    created = 0
+    for item in BUILTIN_PATTERNS:
+        exists = (
+            db.query(models.BehaviorPattern)
+            .filter(
+                models.BehaviorPattern.organization_id.is_(None),
+                models.BehaviorPattern.name == item["name"],
+            )
+            .first()
+        )
+        if exists:
+            continue
+        db.add(
+            models.BehaviorPattern(
+                organization_id=None,
+                name=item["name"],
+                description=item["description"],
+                type=item["type"],
+                severity=item["severity"],
+                definition=item["definition"],
+                enabled=True,
+            )
+        )
+        created += 1
+    if created:
+        db.commit()

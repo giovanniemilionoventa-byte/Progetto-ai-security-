@@ -72,6 +72,27 @@ class AegisClient:
             raise AegisDenied(decision)
         return decision
 
+    def invoke(
+        self,
+        tool: str,
+        operation: str,
+        scope: str = "customers",
+        destination: Optional[str] = None,
+        payload: Optional[dict[str, Any]] = None,
+        execution_id: Optional[str] = None,
+        request_id: Optional[str] = None,
+    ) -> dict[str, Any]:
+        body = {
+            "scope": scope,
+            "destination": destination,
+            "payload": payload or {},
+            "execution_id": execution_id,
+            "request_id": request_id,
+        }
+        response = self._http.post(f"/api/gateway/tools/{tool}/{operation}", json=body)
+        response.raise_for_status()
+        return response.json()
+
     def close(self) -> None:
         self._http.close()
 

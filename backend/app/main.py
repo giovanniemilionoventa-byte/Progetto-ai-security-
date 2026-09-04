@@ -4,17 +4,29 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import CORS_ORIGINS
-from .database import Base, SessionLocal, engine
-from .routers import agents, approvals, auth, authorize, policies, resources
-from .seed import seed_if_empty
+from .database import SessionLocal, ensure_schema
+from fastapi.responses import JSONResponse
+
+from .routers import (
+    agents,
+    approvals,
+    auth,
+    authorize,
+    behavior_patterns,
+    gateway,
+    policies,
+    resources,
+)
+from .seed import seed_builtin_patterns, seed_if_empty
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    Base.metadata.create_all(bind=engine)
+    ensure_schema()
     db = SessionLocal()
     try:
         seed_if_empty(db)
+        seed_builtin_patterns(db)
     finally:
         db.close()
     yield
@@ -45,6 +57,30 @@ app.include_router(policies.router, prefix=API)
 app.include_router(resources.router, prefix=API)
 app.include_router(authorize.router, prefix=API)
 app.include_router(approvals.router, prefix=API)
+app.include_router(behavior_patterns.router, prefix=API)
+app.include_router(gateway.router, prefix=API)
+
+_ENFORCEMENT_PREFIXES = ("/api/authorize", "/api/gateway")
+
+
+@app.middleware("http")
+async def reject_agent_tokens_on_control_plane(request, call_next):
+    path = request.url.path
+    if any(path.startswith(prefix) for prefix in _ENFORCEMENT_PREFIXES):
+        return await call_next(request)
+    if not path.startswith("/api/"):
+        return await call_next(request)
+    agent_header = request.headers.get("x-agent-token")
+    authorization = request.headers.get("authorization") or ""
+    uses_agent = bool(agent_header) or authorization.lower().startswith("bearer aegis_")
+    if uses_agent:
+        return JSONResponse(
+            status_code=403,
+            content={
+                "detail": "Agent credentials cannot access the control plane"
+            },
+        )
+    return await call_next(request)
 
 
 @app.get("/api/health")

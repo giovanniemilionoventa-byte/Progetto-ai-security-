@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 from .config import DATABASE_URL
@@ -19,6 +19,21 @@ if DATABASE_URL.startswith("sqlite"):
         cursor = dbapi_connection.cursor()
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.close()
+
+
+def ensure_schema() -> None:
+    Base.metadata.create_all(bind=engine)
+    if not DATABASE_URL.startswith("sqlite"):
+        return
+    with engine.begin() as conn:
+        rows = conn.execute(text("PRAGMA table_info(events)")).fetchall()
+        cols = {row[1] for row in rows}
+        if "execution_id" not in cols:
+            conn.execute(text("ALTER TABLE events ADD COLUMN execution_id VARCHAR"))
+        if "seq" not in cols:
+            conn.execute(
+                text("ALTER TABLE events ADD COLUMN seq INTEGER DEFAULT 0 NOT NULL")
+            )
 
 
 def get_db():

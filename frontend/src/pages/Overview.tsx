@@ -17,7 +17,7 @@ export default function Overview() {
       <h2 className="page-title">Control plane</h2>
       <p className="page-sub">Identity, policy, risk, audit. The model is a provider, not the center.</p>
       <div className="flow">
-        <b>Agent</b> → tool call → <b>Aegis</b> → ALLOW / APPROVAL / BLOCK → resource
+        <b>Agent</b> + Aegis token → <b>Gateway</b> → ALLOW / APPROVAL / BLOCK → protected tool
       </div>
       <div className="grid grid-4" style={{ marginBottom: 20 }}>
         {[

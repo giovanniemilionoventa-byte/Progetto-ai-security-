@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     Column,
     DateTime,
@@ -41,6 +42,9 @@ class Organization(Base):
     events = relationship("Event", back_populates="organization")
     alerts = relationship("Alert", back_populates="organization")
     approvals = relationship("Approval", back_populates="organization")
+    executions = relationship("Execution", back_populates="organization")
+    behavior_patterns = relationship("BehaviorPattern", back_populates="organization")
+    behavior_signals = relationship("BehaviorSignal", back_populates="organization")
 
 
 class User(Base):
@@ -160,12 +164,27 @@ class Policy(Base):
     organization = relationship("Organization", back_populates="policies")
 
 
+class Execution(Base):
+    __tablename__ = "executions"
+
+    id = Column(String, primary_key=True, default=new_id)
+    organization_id = Column(String, ForeignKey("organizations.id"), nullable=False)
+    agent_id = Column(String, ForeignKey("agents.id"), nullable=False)
+    created_at = Column(DateTime, default=utcnow)
+
+    organization = relationship("Organization", back_populates="executions")
+    events = relationship("Event", back_populates="execution")
+    behavior_signals = relationship("BehaviorSignal", back_populates="execution")
+
+
 class Event(Base):
     __tablename__ = "events"
 
     id = Column(String, primary_key=True, default=new_id)
     organization_id = Column(String, ForeignKey("organizations.id"), nullable=False)
     agent_id = Column(String, ForeignKey("agents.id"), nullable=True)
+    execution_id = Column(String, ForeignKey("executions.id"), nullable=True, index=True)
+    seq = Column(Integer, nullable=False, default=0)
     resource_kind = Column(String, nullable=False)
     action = Column(String, nullable=False)
     scope = Column(String, nullable=False)
@@ -178,6 +197,46 @@ class Event(Base):
     created_at = Column(DateTime, default=utcnow)
 
     organization = relationship("Organization", back_populates="events")
+    execution = relationship("Execution", back_populates="events")
+    behavior_signals = relationship("BehaviorSignal", back_populates="event")
+
+
+class BehaviorPattern(Base):
+    __tablename__ = "behavior_patterns"
+
+    id = Column(String, primary_key=True, default=new_id)
+    organization_id = Column(String, ForeignKey("organizations.id"), nullable=True, index=True)
+    name = Column(String, nullable=False)
+    description = Column(Text, default="")
+    type = Column(String, nullable=False)
+    severity = Column(String, nullable=False, default="medium")
+    definition = Column(JSON, nullable=False)
+    enabled = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    organization = relationship("Organization", back_populates="behavior_patterns")
+    signals = relationship("BehaviorSignal", back_populates="pattern")
+
+
+class BehaviorSignal(Base):
+    __tablename__ = "behavior_signals"
+
+    id = Column(String, primary_key=True, default=new_id)
+    organization_id = Column(String, ForeignKey("organizations.id"), nullable=False)
+    agent_id = Column(String, ForeignKey("agents.id"), nullable=False)
+    execution_id = Column(String, ForeignKey("executions.id"), nullable=True)
+    event_id = Column(String, ForeignKey("events.id"), nullable=True)
+    pattern_id = Column(String, ForeignKey("behavior_patterns.id"), nullable=False)
+    severity = Column(String, nullable=False, default="medium")
+    title = Column(String, nullable=False)
+    message = Column(Text, default="")
+    created_at = Column(DateTime, default=utcnow)
+
+    organization = relationship("Organization", back_populates="behavior_signals")
+    execution = relationship("Execution", back_populates="behavior_signals")
+    event = relationship("Event", back_populates="behavior_signals")
+    pattern = relationship("BehaviorPattern", back_populates="signals")
 
 
 class Alert(Base):

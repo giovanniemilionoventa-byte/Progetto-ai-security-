@@ -14,7 +14,7 @@ export default function Events() {
         <table>
           <thead>
             <tr>
-              <th>Time</th><th>Decision</th><th>Call</th><th>Risk</th><th>Reason</th>
+              <th>Time</th><th>Decision</th><th>Call</th><th>Execution</th><th>Risk</th><th>Reason</th>
             </tr>
           </thead>
           <tbody>
@@ -22,8 +22,9 @@ export default function Events() {
               <tr key={e.id}>
                 <td className="mono">{new Date(e.created_at).toLocaleString()}</td>
                 <td><span className={"badge badge-" + e.decision}>{e.decision}</span></td>
-                <td className="mono">{e.resource_kind}.{e.action}<br />{e.scope}</td>
-                <td><span className={"badge badge-" + e.risk_level}>{e.risk_level} {e.risk_score}</span></td>
+                 <td className="mono">{e.resource_kind}.{e.action}<br />{e.scope}</td>
+                 <td className="mono">{e.execution_id ? e.execution_id.slice(0, 8) : "—"}</td>
+                 <td><span className={"badge badge-" + e.risk_level}>{e.risk_level} {e.risk_score}</span></td>
                 <td>{e.reason}</td>
               </tr>
             ))}

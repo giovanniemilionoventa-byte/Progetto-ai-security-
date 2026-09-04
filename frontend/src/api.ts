@@ -168,6 +168,7 @@ export type EventRow = {
   risk_level: string;
   reason: string;
   request_id: string;
+  execution_id?: string | null;
   created_at: string;
 };
 export type AlertRow = {

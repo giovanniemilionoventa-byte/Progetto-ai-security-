@@ -5,6 +5,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from .. import models
+from . import permission as permission_engine
 
 DECISIONS = ("BLOCK", "APPROVAL", "ALLOW")
 PRIORITY = {"BLOCK": 0, "APPROVAL": 1, "ALLOW": 2}
@@ -25,31 +26,6 @@ def _matches(pattern: Optional[str], value: Optional[str]) -> bool:
     return fnmatch(value.lower(), pattern.lower())
 
 
-def _permission_allows(agent: models.Agent, kind: str, action: str, scope: str) -> bool:
-    perms = agent.permissions
-    if not perms:
-        return False
-    denies = [
-        p
-        for p in perms
-        if p.effect.lower() == "deny"
-        and _matches(p.resource_kind, kind)
-        and _matches(p.action, action)
-        and _matches(p.scope, scope)
-    ]
-    if denies:
-        return False
-    allows = [
-        p
-        for p in perms
-        if p.effect.lower() == "allow"
-        and _matches(p.resource_kind, kind)
-        and _matches(p.action, action)
-        and _matches(p.scope, scope)
-    ]
-    return bool(allows)
-
-
 def evaluate(
     db: Session,
     agent: models.Agent,
@@ -57,11 +33,13 @@ def evaluate(
     action: str,
     scope: str,
     destination: Optional[str] = None,
+    *,
+    check_permission: bool = True,
 ) -> PolicyResult:
     kind = resource_kind.lower()
     act = action.upper()
 
-    if not _permission_allows(agent, kind, act, scope):
+    if check_permission and not permission_engine.allows(agent, kind, act, scope):
         return PolicyResult(
             decision="BLOCK",
             reason="Agent lacks permission for this resource/action/scope (least privilege).",

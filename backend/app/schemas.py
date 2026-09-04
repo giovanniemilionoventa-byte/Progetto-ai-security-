@@ -162,6 +162,9 @@ class AuthorizeRequest(BaseModel):
     scope: str = Field(..., examples=["customers", "/Sales", "external"])
     destination: Optional[str] = None
     metadata: Optional[dict] = None
+    execution_id: Optional[str] = None
+    request_id: Optional[str] = None
+    client_request_id: Optional[str] = None
 
 
 class AuthorizeResponse(BaseModel):
@@ -173,6 +176,32 @@ class AuthorizeResponse(BaseModel):
     approval_id: Optional[str] = None
     agent_id: str
     organization_id: str
+
+
+class GatewayRequest(BaseModel):
+    scope: str = "customers"
+    destination: Optional[str] = None
+    payload: Optional[dict] = None
+    metadata: Optional[dict] = None
+    execution_id: Optional[str] = None
+    request_id: Optional[str] = None
+    client_request_id: Optional[str] = None
+
+
+class GatewayResponse(BaseModel):
+    request_id: str
+    decision: str
+    risk_score: float
+    risk_level: str
+    reason: str
+    approval_id: Optional[str] = None
+    agent_id: str
+    organization_id: str
+    execution_id: Optional[str] = None
+    tool: str
+    operation: str
+    executed: bool
+    result: Optional[dict] = None
 
 
 class EventOut(BaseModel):
@@ -188,6 +217,7 @@ class EventOut(BaseModel):
     risk_level: str
     reason: str
     request_id: str
+    execution_id: Optional[str] = None
     created_at: datetime
 
     class Config:
@@ -235,3 +265,37 @@ class DashboardStats(BaseModel):
     pending_approvals: int
     open_alerts: int
     allow_rate: float
+
+
+class BehaviorPatternCreate(BaseModel):
+    name: str
+    description: str = ""
+    type: str
+    severity: str = "medium"
+    definition: dict
+    enabled: bool = True
+
+
+class BehaviorPatternUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    type: Optional[str] = None
+    severity: Optional[str] = None
+    definition: Optional[dict] = None
+    enabled: Optional[bool] = None
+
+
+class BehaviorPatternOut(BaseModel):
+    id: str
+    organization_id: Optional[str] = None
+    name: str
+    description: str
+    type: str
+    severity: str
+    definition: dict
+    enabled: bool
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True

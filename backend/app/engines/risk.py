@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Optional
 
 IRREVERSIBLE = {
     ("payments", "TRANSFER"),
@@ -26,6 +26,7 @@ def evaluate(
     scope: str,
     destination: Optional[str] = None,
     policy_decision: str = "ALLOW",
+    behavior_signals: Optional[list[Any]] = None,
 ) -> RiskResult:
     score = 10.0
     factors: list[str] = []
@@ -56,6 +57,22 @@ def evaluate(
     elif policy_decision == "APPROVAL":
         score += 10
         factors.append("requires_human")
+
+    if behavior_signals:
+        severities = {
+            getattr(signal, "severity", None)
+            or (signal.get("severity") if isinstance(signal, dict) else None)
+            for signal in behavior_signals
+        }
+        if "critical" in severities:
+            score += 25
+            factors.append("behavior_critical")
+        elif "high" in severities:
+            score += 15
+            factors.append("behavior_high")
+        else:
+            score += 8
+            factors.append("behavior_signal")
 
     score = min(100.0, score)
     if score >= 70:
