@@ -1,3 +1,5 @@
+import os
+
 from sqlalchemy.orm import Session
 
 from . import models
@@ -182,8 +184,12 @@ def seed_if_empty(db: Session) -> None:
         )
     )
 
-    with open("/tmp/aegis_demo_token.txt", "w", encoding="utf-8") as handle:
-        handle.write(token)
+    token_path = os.environ.get("AEGIS_DEMO_TOKEN_PATH", "/tmp/aegis_demo_token.txt")
+    try:
+        with open(token_path, "w", encoding="utf-8") as handle:
+            handle.write(token)
+    except OSError:
+        pass
 
     reader = models.Agent(
         organization_id=org.id,

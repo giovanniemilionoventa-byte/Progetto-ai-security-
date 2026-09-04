@@ -93,6 +93,32 @@ Demo agent (runs the seven blueprint tools):
 python3 demo-agent/agent.py
 ```
 
+## Isolated trust domains (Phase 10)
+
+```bash
+docker compose up --build
+```
+
+Trust domains: `control-plane`, `enforcement-gateway`, `credential-broker`, `protected-tool`, unprivileged `agent`.
+
+Flow: Agent → Gateway (`authorize_request`, EAT sign) → Broker (EAT verify, unwrap) → Tool.
+
+| Flow | Compose attachment |
+| --- | --- |
+| Agent → Gateway | ALLOW (`agent_net`) |
+| Agent → Broker / Tool / CP / DB | DENY |
+| Gateway → Broker | ALLOW (`broker_net`, internal) |
+| Gateway → Tool | DENY (gateway not on `tool_net`) |
+| Broker → Tool | ALLOW (`tool_net`, internal) |
+
+IMPLEMENTED: process split, EAT HMAC-SHA256 with `AEGIS_EAT_KEY`, CAN USE ≠ CAN READ on the Compose path, Agent unprivileged, Agent→DB DENY (no volume).
+
+NOT IMPLEMENTED: CP/Gateway SQL privilege isolation (shared SQLite volume), mTLS.
+
+NOT VERIFIED: L3 runtime reachability unless Docker daemon is present. Compose YAML is a contract, not a live probe.
+
+FUTURE: PostgreSQL roles, mTLS, secret store other than env.
+
 ## Principles
 
 Model-agnostic. Least privilege. Zero trust. Privacy by design (metadata only, no conversation archive). Deterministic enforcement. Full auditability.
@@ -105,4 +131,6 @@ frontend/         React dashboard
 sdk/python/       AegisClient
 sdk/typescript/   fetch-based client
 demo-agent/       tool-calling sample
+infra/agent/      unprivileged agent image + network probe
+docker-compose.yml
 ```

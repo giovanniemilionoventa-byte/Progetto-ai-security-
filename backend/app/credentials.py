@@ -1,4 +1,7 @@
+from collections.abc import Mapping
 from dataclasses import dataclass
+
+from . import config
 
 
 class CredentialAccessDenied(Exception):
@@ -11,9 +14,26 @@ class ToolCredential:
     secret: str
 
 
-_INTERNAL_SECRETS = {
-    "crm": "aegis-internal-crm-secret-do-not-export",
-}
+class _SecretMap(Mapping):
+    def __getitem__(self, tool: str) -> str:
+        if tool == "crm":
+            return config.CRM_SECRET
+        raise KeyError(tool)
+
+    def __iter__(self):
+        yield "crm"
+
+    def __len__(self) -> int:
+        return 1
+
+    def get(self, tool: str, default=None):
+        try:
+            return self[tool]
+        except KeyError:
+            return default
+
+
+_INTERNAL_SECRETS = _SecretMap()
 
 
 class CredentialBroker:

@@ -1,11 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from .. import models, schemas
-from ..credentials import broker
+from .. import config, models, schemas
 from ..database import get_db
 from ..engines.enforcement import authorize_request
-from ..protected.crm import InvalidToolCredential, protected_crm
+from ..remote import dispatch_via_broker
 from ..security import get_agent_from_token
 
 router = APIRouter(prefix="/gateway", tags=["enforcement-plane"])
@@ -22,19 +21,16 @@ TOOL_MAP = {
 }
 
 
-def _invoke_tool(
-    tool: str,
-    operation: str,
-    scope: str,
-    payload: dict | None,
-    organization_id: str,
+def _harness_execute(
+    tool: str, operation: str, scope: str, payload: dict | None, organization_id: str
 ) -> dict:
+    from ..credentials import broker
+    from ..protected.crm import protected_crm
+
     cred = broker.issue(tool, organization_id=organization_id)
-    if tool == "crm":
-        return protected_crm.execute(
-            operation, cred.secret, scope=scope, payload=payload
-        )
-    raise HTTPException(status_code=400, detail=f"Unsupported tool '{tool}'")
+    if tool != "crm":
+        raise HTTPException(status_code=400, detail=f"Unsupported tool '{tool}'")
+    return protected_crm.execute(operation, cred.secret, scope=scope, payload=payload)
 
 
 @router.post("/tools/{tool}/{operation}", response_model=schemas.GatewayResponse)
@@ -51,7 +47,13 @@ def invoke_tool(
     if not spec or op not in spec["operations"]:
         raise HTTPException(status_code=400, detail="Unknown protected tool or operation")
 
-    before = protected_crm.call_count if tool_name == "crm" else 0
+    harness = tool_name == "crm" and not config.BROKER_URL
+    before = 0
+    if harness:
+        from ..protected.crm import protected_crm
+
+        before = protected_crm.call_count
+
     authorize_body = schemas.AuthorizeRequest(
         resource_kind=spec["kind"],
         action=spec["operations"][op],
@@ -69,15 +71,33 @@ def invoke_tool(
 
     if event.decision == "ALLOW" and not outcome.replayed:
         try:
-            tool_result = _invoke_tool(
-                tool_name, op, body.scope, body.payload, agent.organization_id
-            )
+            if config.BROKER_URL:
+                tool_result = dispatch_via_broker(
+                    tool=tool_name,
+                    operation=op,
+                    scope=body.scope,
+                    destination=body.destination,
+                    payload=body.payload,
+                    org_id=agent.organization_id,
+                    agent_id=agent.id,
+                    execution_id=event.execution_id,
+                    request_id=event.request_id,
+                )
+            else:
+                tool_result = _harness_execute(
+                    tool_name, op, body.scope, body.payload, agent.organization_id
+                )
             executed = True
-        except InvalidToolCredential as exc:
-            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=502, detail="Tool dispatch failed") from exc
     else:
-        if tool_name == "crm" and protected_crm.call_count != before:
-            raise HTTPException(status_code=500, detail="Tool invoked after deny")
+        if harness:
+            from ..protected.crm import protected_crm
+
+            if protected_crm.call_count != before:
+                raise HTTPException(status_code=500, detail="Tool invoked after deny")
 
     return schemas.GatewayResponse(
         request_id=event.request_id,

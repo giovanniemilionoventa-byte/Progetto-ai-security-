@@ -1,19 +1,23 @@
 from typing import Any, Optional
 
+from .. import config
+
 
 class InvalidToolCredential(Exception):
     pass
 
 
 class ProtectedCRM:
-    EXPECTED_SECRET = "aegis-internal-crm-secret-do-not-export"
-
     def __init__(self) -> None:
         self.calls: list[dict[str, Any]] = []
         self.records = [
             {"id": "c-1", "name": "Acme Customer", "email": "buyer@example.test"},
             {"id": "c-2", "name": "Beta Buyer", "email": "ops@beta.test"},
         ]
+
+    @property
+    def EXPECTED_SECRET(self) -> str:
+        return config.CRM_SECRET
 
     def reset(self) -> None:
         self.calls.clear()
@@ -40,7 +44,12 @@ class ProtectedCRM:
             }
         )
         if operation == "read":
-            return {"ok": True, "operation": "read", "scope": scope, "records": list(self.records)}
+            return {
+                "ok": True,
+                "operation": "read",
+                "scope": scope,
+                "records": list(self.records),
+            }
         if operation == "update":
             return {
                 "ok": True,
@@ -49,7 +58,12 @@ class ProtectedCRM:
                 "updated": 1,
             }
         if operation == "delete":
-            return {"ok": True, "operation": "delete", "scope": scope, "deleted": 0}
+            return {
+                "ok": True,
+                "operation": "delete",
+                "scope": scope,
+                "deleted": 0,
+            }
         return {"ok": True, "operation": operation, "scope": scope}
 
 

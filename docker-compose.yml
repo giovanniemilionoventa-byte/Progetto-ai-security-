@@ -1,0 +1,140 @@
+name: aegis
+
+networks:
+  agent_net:
+    driver: bridge
+  broker_net:
+    driver: bridge
+    internal: true
+  tool_net:
+    driver: bridge
+    internal: true
+  public_net:
+    driver: bridge
+
+volumes:
+  aegis-data:
+
+services:
+  control-plane:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: aegis-control-plane
+    environment:
+      AEGIS_ROLE: control-plane
+      AEGIS_DATABASE_URL: sqlite:////data/aegis.db
+      AEGIS_SECRET_KEY: ${AEGIS_SECRET_KEY:-aegis-dev-secret-change-in-production}
+      AEGIS_DEMO_TOKEN_PATH: /data/demo_token.txt
+    volumes:
+      - aegis-data:/data
+    networks:
+      - public_net
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  enforcement-gateway:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: aegis-enforcement-gateway
+    environment:
+      AEGIS_ROLE: enforcement-gateway
+      AEGIS_DATABASE_URL: sqlite:////data/aegis.db
+      AEGIS_SECRET_KEY: ${AEGIS_SECRET_KEY:-aegis-dev-secret-change-in-production}
+      AEGIS_EAT_KEY: ${AEGIS_EAT_KEY:-aegis-dev-eat-key-change-in-production}
+      AEGIS_BROKER_URL: http://credential-broker:8000/api
+      AEGIS_INTERNAL_GATEWAY_TOKEN: ${AEGIS_INTERNAL_GATEWAY_TOKEN:-aegis-internal-gateway-token}
+    volumes:
+      - aegis-data:/data
+    networks:
+      - agent_net
+      - broker_net
+    ports:
+      - "8001:8000"
+    depends_on:
+      control-plane:
+        condition: service_healthy
+      credential-broker:
+        condition: service_started
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  credential-broker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: aegis-credential-broker
+    environment:
+      AEGIS_ROLE: credential-broker
+      AEGIS_EAT_KEY: ${AEGIS_EAT_KEY:-aegis-dev-eat-key-change-in-production}
+      AEGIS_INTERNAL_GATEWAY_TOKEN: ${AEGIS_INTERNAL_GATEWAY_TOKEN:-aegis-internal-gateway-token}
+      AEGIS_INTERNAL_TOOL_TOKEN: ${AEGIS_INTERNAL_TOOL_TOKEN:-aegis-internal-tool-token}
+      AEGIS_TOOL_URL: http://protected-tool:8000/api
+      AEGIS_CRM_SECRET: ${AEGIS_CRM_SECRET:-change-me-crm-secret}
+    networks:
+      - broker_net
+      - tool_net
+    restart: unless-stopped
+
+  protected-tool:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: aegis-protected-tool
+    environment:
+      AEGIS_ROLE: protected-tool
+      AEGIS_INTERNAL_TOOL_TOKEN: ${AEGIS_INTERNAL_TOOL_TOKEN:-aegis-internal-tool-token}
+      AEGIS_CRM_SECRET: ${AEGIS_CRM_SECRET:-change-me-crm-secret}
+    networks:
+      - tool_net
+    restart: unless-stopped
+
+  agent:
+    build:
+      context: .
+      dockerfile: infra/agent/Dockerfile
+    container_name: aegis-agent
+    user: "10001:10001"
+    read_only: true
+    privileged: false
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    environment:
+      AEGIS_BASE_URL: http://enforcement-gateway:8000
+      AEGIS_GATEWAY_HOST: enforcement-gateway:8000
+      AEGIS_CONTROL_HOST: control-plane:8000
+      AEGIS_BROKER_HOST: credential-broker:8000
+      AEGIS_TOOL_HOST: protected-tool:8000
+    networks:
+      - agent_net
+    depends_on:
+      enforcement-gateway:
+        condition: service_healthy
+    restart: unless-stopped
