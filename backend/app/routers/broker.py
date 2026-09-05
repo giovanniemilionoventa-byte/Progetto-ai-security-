@@ -24,6 +24,8 @@ class BrokerExecuteRequest(BaseModel):
     agent_id: str
     execution_id: str
     request_id: str
+    contract_id: Optional[str] = None
+    contract_version: Optional[int] = None
 
 
 def _sanitize(result: dict[str, Any]) -> dict[str, Any]:
@@ -89,6 +91,10 @@ def execute(body: BrokerExecuteRequest, _: None = Depends(require_gateway_token)
         raise HTTPException(status_code=401, detail="eat_rejected")
     expected_hash = param_hash(body.scope, body.destination, body.payload)
     if claims["param_hash"] != expected_hash:
+        raise HTTPException(status_code=401, detail="eat_rejected")
+    if (claims.get("contract_id") or None) != (body.contract_id or None):
+        raise HTTPException(status_code=401, detail="eat_rejected")
+    if claims.get("contract_version") != body.contract_version:
         raise HTTPException(status_code=401, detail="eat_rejected")
     if not replay_store.consume(claims["jti"], float(claims["exp"])):
         raise HTTPException(status_code=401, detail="eat_rejected")

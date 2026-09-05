@@ -330,6 +330,8 @@ def test_broker_rejects_invalid_eat_and_does_not_call_tool(monkeypatch):
         {"execution_id": "other-exec"},
         {"scope": "all"},
         {"payload": {"x": 1}},
+        {"contract_id": "other-contract"},
+        {"contract_version": 9},
     ],
 )
 def test_broker_rejects_claim_mismatch(monkeypatch, mutate):

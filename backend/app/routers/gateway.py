@@ -59,6 +59,7 @@ def invoke_tool(
         action=spec["operations"][op],
         scope=body.scope,
         destination=body.destination,
+        payload=body.payload,
         metadata=body.metadata,
         execution_id=body.execution_id,
         request_id=body.request_id,
@@ -82,6 +83,8 @@ def invoke_tool(
                     agent_id=agent.id,
                     execution_id=event.execution_id,
                     request_id=event.request_id,
+                    contract_id=outcome.contract_id,
+                    contract_version=outcome.contract_version,
                 )
             else:
                 tool_result = _harness_execute(

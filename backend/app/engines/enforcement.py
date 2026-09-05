@@ -6,8 +6,10 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from .. import models, schemas
+from ..contract_store import ContractResolutionError, resolve_active_contract_for_agent
 from ..security import utcnow
 from . import behavior as behavior_engine
+from . import contract as contract_engine
 from . import permission as permission_engine
 from . import policy as policy_engine
 from . import risk as risk_engine
@@ -19,6 +21,8 @@ class AuthorizationOutcome:
     approval_id: Optional[str]
     matches: list = field(default_factory=list)
     replayed: bool = False
+    contract_id: Optional[str] = None
+    contract_version: Optional[int] = None
 
 
 def _maybe_alert(db: Session, event: models.Event) -> None:
@@ -94,6 +98,10 @@ def authorize_request(
 
     kind = body.resource_kind.lower()
     act = body.action.upper()
+    payload = body.payload
+    if payload is None and isinstance(body.metadata, dict):
+        payload = body.metadata.get("payload")
+    claimed = contract_engine.claimed_contract_id(body.metadata)
     permitted = permission_engine.allows(agent, kind, act, body.scope)
 
     previous = behavior_engine.reconstruct_trajectory(db, execution.id)
@@ -124,6 +132,42 @@ def authorize_request(
     else:
         decision = policy_result.decision
         reason = policy_result.reason
+
+    contract = None
+    try:
+        contract = resolve_active_contract_for_agent(
+            db, agent, claimed_contract_id=claimed
+        )
+    except ContractResolutionError as exc:
+        if claimed or exc.reason not in {"not_found", "no_active_contract"}:
+            decision = "BLOCK"
+            reason = {
+                "untrusted_contract_id": (
+                    "Declared contract_id does not match the resolved runtime contract."
+                ),
+                "ambiguous_active_contract": "Runtime contract is ambiguous.",
+                "organization_mismatch": "Runtime contract organization mismatch.",
+                "agent_mismatch": "Runtime contract agent mismatch.",
+                "not_found": "Declared contract_id does not match the resolved runtime contract.",
+                "no_active_contract": "Declared contract_id does not match the resolved runtime contract.",
+            }.get(exc.reason, "Runtime contract cannot be resolved.")
+            contract = None
+    else:
+        verdict = contract_engine.evaluate_contract(
+            contract,
+            kind=kind,
+            action=act,
+            scope=body.scope,
+            destination=body.destination,
+            payload=payload if isinstance(payload, dict) or payload is None else None,
+            previous=previous,
+            current=current,
+            claimed_contract_id=claimed,
+        )
+        if not verdict.allowed:
+            if decision != "BLOCK":
+                reason = verdict.reason
+            decision = "BLOCK"
 
     risk = risk_engine.evaluate(
         kind,
@@ -174,4 +218,10 @@ def authorize_request(
         approval_id = approval.id
 
     db.commit()
-    return AuthorizationOutcome(event=event, approval_id=approval_id, matches=matches)
+    return AuthorizationOutcome(
+        event=event,
+        approval_id=approval_id,
+        matches=matches,
+        contract_id=contract.contract_id if contract else None,
+        contract_version=contract.version if contract else None,
+    )

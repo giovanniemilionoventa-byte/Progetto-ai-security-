@@ -77,6 +77,8 @@ def sign_eat(
     ttl_seconds: Optional[int] = None,
     now: Optional[int] = None,
     jti: Optional[str] = None,
+    contract_id: Optional[str] = None,
+    contract_version: Optional[int] = None,
 ) -> str:
     issued = int(now if now is not None else utcnow().timestamp())
     ttl = int(ttl_seconds if ttl_seconds is not None else config.EAT_TTL_SECONDS)
@@ -96,6 +98,8 @@ def sign_eat(
         "scope": scope,
         "destination": destination,
         "param_hash": param_hash(scope, destination, payload),
+        "contract_id": contract_id,
+        "contract_version": contract_version,
     }
     return sign_claims(claims)
 
@@ -141,6 +145,22 @@ def verify_eat(token: str, *, now: Optional[int] = None) -> dict[str, Any]:
     for field in required:
         if not claims.get(field):
             raise EatError("missing_claim")
+    if "contract_id" not in claims or "contract_version" not in claims:
+        raise EatError("missing_claim")
+    contract_id = claims.get("contract_id")
+    contract_version = claims.get("contract_version")
+    if contract_id is not None and (
+        not isinstance(contract_id, str) or not contract_id.strip()
+    ):
+        raise EatError("missing_claim")
+    if contract_version is not None and (
+        not isinstance(contract_version, int)
+        or isinstance(contract_version, bool)
+        or contract_version < 1
+    ):
+        raise EatError("missing_claim")
+    if (contract_id is None) != (contract_version is None):
+        raise EatError("missing_claim")
     if "secret" in claims:
         raise EatError("forbidden_claim")
     return claims

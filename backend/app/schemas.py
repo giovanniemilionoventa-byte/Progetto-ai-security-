@@ -161,6 +161,7 @@ class AuthorizeRequest(BaseModel):
     action: str = Field(..., examples=["READ", "SEND", "EXPORT", "DELETE", "TRANSFER"])
     scope: str = Field(..., examples=["customers", "/Sales", "external"])
     destination: Optional[str] = None
+    payload: Optional[dict] = None
     metadata: Optional[dict] = None
     execution_id: Optional[str] = None
     request_id: Optional[str] = None

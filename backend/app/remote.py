@@ -25,6 +25,8 @@ def dispatch_via_broker(
     agent_id: str,
     execution_id: str,
     request_id: str,
+    contract_id: Optional[str] = None,
+    contract_version: Optional[int] = None,
 ) -> dict[str, Any]:
     if not config.BROKER_URL:
         raise HTTPException(status_code=503, detail="Credential broker unavailable")
@@ -38,6 +40,8 @@ def dispatch_via_broker(
         scope=scope,
         destination=destination,
         payload=payload,
+        contract_id=contract_id,
+        contract_version=contract_version,
     )
     try:
         response = httpx.post(
@@ -53,6 +57,8 @@ def dispatch_via_broker(
                 "agent_id": agent_id,
                 "execution_id": execution_id,
                 "request_id": request_id,
+                "contract_id": contract_id,
+                "contract_version": contract_version,
             },
             headers=_gateway_headers(),
             timeout=config.REMOTE_TIMEOUT_SECONDS,
