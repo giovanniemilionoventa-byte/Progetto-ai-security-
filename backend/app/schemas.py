@@ -299,3 +299,76 @@ class BehaviorPatternOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class RuntimeContractIntegrity(BaseModel):
+    algorithm: Optional[str] = None
+    digest: Optional[str] = None
+    signature: Optional[str] = None
+    key_id: Optional[str] = None
+    signed_at: Optional[datetime] = None
+
+    class Config:
+        extra = "allow"
+
+
+class RuntimeContractCapability(BaseModel):
+    name: str
+    actions: Optional[list[str]] = None
+    description: Optional[str] = None
+
+    class Config:
+        extra = "allow"
+
+
+class RuntimeContractResource(BaseModel):
+    kind: str
+    name: Optional[str] = None
+    identifier: Optional[str] = None
+    scope: Optional[str] = None
+    sensitivity: Optional[str] = None
+
+    class Config:
+        extra = "allow"
+
+
+class RuntimeContractDocument(BaseModel):
+    organization_id: str
+    agent_id: str
+    contract_id: str
+    version: int
+    status: str = "DRAFT"
+    purpose: str = ""
+    capabilities: list[dict] = Field(default_factory=list)
+    resources: list[dict] = Field(default_factory=list)
+    constraints: dict = Field(default_factory=dict)
+    data_constraints: dict = Field(default_factory=dict)
+    workflow: Optional[dict] = None
+    approval_rules: list[dict] = Field(default_factory=list)
+    valid_from: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
+    integrity: Optional[RuntimeContractIntegrity] = None
+
+
+class RuntimeContractOut(BaseModel):
+    id: str
+    organization_id: str
+    agent_id: str
+    contract_id: str
+    version: int
+    status: str
+    purpose: str
+    capabilities: list
+    resources: list
+    constraints: dict
+    data_constraints: dict
+    workflow: Optional[dict] = None
+    approval_rules: list
+    valid_from: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
+    integrity: Optional[dict] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True

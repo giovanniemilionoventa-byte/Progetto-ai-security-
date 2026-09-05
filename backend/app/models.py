@@ -45,6 +45,7 @@ class Organization(Base):
     executions = relationship("Execution", back_populates="organization")
     behavior_patterns = relationship("BehaviorPattern", back_populates="organization")
     behavior_signals = relationship("BehaviorSignal", back_populates="organization")
+    runtime_contracts = relationship("RuntimeContract", back_populates="organization")
 
 
 class User(Base):
@@ -94,6 +95,7 @@ class Agent(Base):
     owner = relationship("User", back_populates="owned_agents")
     credentials = relationship("Credential", back_populates="agent")
     permissions = relationship("Permission", back_populates="agent")
+    runtime_contracts = relationship("RuntimeContract", back_populates="agent")
 
 
 class Credential(Base):
@@ -272,3 +274,39 @@ class Approval(Base):
     reviewed_at = Column(DateTime, nullable=True)
 
     organization = relationship("Organization", back_populates="approvals")
+
+
+class RuntimeContract(Base):
+    __tablename__ = "runtime_contracts"
+
+    id = Column(String, primary_key=True, default=new_id)
+    organization_id = Column(String, ForeignKey("organizations.id"), nullable=False, index=True)
+    agent_id = Column(String, ForeignKey("agents.id"), nullable=False, index=True)
+    contract_id = Column(String, nullable=False, index=True)
+    version = Column(Integer, nullable=False)
+    status = Column(String, nullable=False, default="DRAFT")
+    purpose = Column(Text, default="")
+    capabilities = Column(JSON, nullable=False)
+    resources = Column(JSON, nullable=False)
+    constraints = Column(JSON, nullable=False)
+    data_constraints = Column(JSON, nullable=False)
+    workflow = Column(JSON, nullable=True)
+    approval_rules = Column(JSON, nullable=False)
+    valid_from = Column(DateTime, nullable=True)
+    expires_at = Column(DateTime, nullable=True)
+    integrity = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    organization = relationship("Organization", back_populates="runtime_contracts")
+    agent = relationship("Agent", back_populates="runtime_contracts")
+
+    __table_args__ = (
+        UniqueConstraint(
+            "organization_id",
+            "agent_id",
+            "contract_id",
+            "version",
+            name="uq_runtime_contract_identity",
+        ),
+    )
