@@ -110,6 +110,7 @@ def authorize_request(
         action=act,
         scope=body.scope,
         destination=body.destination,
+        decision=None,
     )
     trajectory = previous + [current]
     matches = behavior_engine.evaluate(db, agent, trajectory)

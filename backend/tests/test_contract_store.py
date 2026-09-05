@@ -403,7 +403,12 @@ def test_trajectory_remains_separate_from_workflow():
     db.commit()
     trajectory = reconstruct_trajectory(db, "exec-1")
     assert trajectory == [
-        TrajectoryStep(resource_kind="crm", action="READ", scope="customers")
+        TrajectoryStep(
+            resource_kind="crm",
+            action="READ",
+            scope="customers",
+            decision="ALLOW",
+        )
     ]
     workflow = load_contract_workflow(WORKFLOW)
     correlation = correlate_trajectory_with_workflow(workflow, trajectory)

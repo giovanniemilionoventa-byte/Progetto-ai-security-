@@ -46,6 +46,7 @@ class TrajectoryStep:
     action: str
     scope: str
     destination: Optional[str] = None
+    decision: Optional[str] = None
 
 
 @dataclass
@@ -238,6 +239,7 @@ def reconstruct_trajectory(db: Session, execution_id: str) -> list[TrajectorySte
             action=event.action,
             scope=event.scope,
             destination=event.destination,
+            decision=event.decision,
         )
         for event in events
     ]

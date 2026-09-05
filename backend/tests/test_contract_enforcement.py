@@ -368,6 +368,31 @@ def test_workflow_valid_then_skip_blocks():
     assert nxt.event.decision == "ALLOW"
 
 
+def test_blocked_matching_step_cannot_satisfy_workflow():
+    db = _db()
+    save_contract(db, _contract())
+    db.commit()
+    blocked = _authorize(
+        db,
+        _agent(db),
+        execution_id="exec-blocked-progress",
+        payload={"ssn": "000"},
+    )
+    assert blocked.event.decision == "BLOCK"
+    jump = _authorize(
+        db,
+        _agent(db),
+        resource_kind="email",
+        action="SEND",
+        scope="internal",
+        destination="internal",
+        payload={"id": "1"},
+        execution_id="exec-blocked-progress",
+    )
+    assert jump.event.decision == "BLOCK"
+    assert "workflow" in jump.event.reason.lower() or "skip" in jump.event.reason.lower()
+
+
 def test_declared_workflow_and_purpose_are_ignored():
     db = _db()
     save_contract(db, _contract())

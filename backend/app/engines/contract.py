@@ -239,6 +239,8 @@ def _evaluate_workflow(
     possible: set[str] = set()
     started = False
     for actual in previous:
+        if actual.decision not in (None, "ALLOW"):
+            continue
         matches = _matching_step_ids(workflow, actual)
         if not matches:
             return "Request skips a required runtime contract workflow step."
