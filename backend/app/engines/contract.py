@@ -6,7 +6,12 @@ from fnmatch import fnmatch
 from typing import Any, Optional
 
 from .. import models
-from ..runtime_contract import ContractWorkflow, ContractWorkflowError, load_contract_workflow
+from ..runtime_contract import (
+    ContractWorkflow,
+    ContractWorkflowError,
+    contract_lifecycle_verdict,
+    load_contract_workflow,
+)
 from .behavior import TrajectoryStep
 
 KNOWN_CONSTRAINT_KEYS = {
@@ -287,6 +292,16 @@ def evaluate_contract(
             reason="Declared contract_id does not match the resolved runtime contract.",
             contract=contract,
         )
+    verdict = contract_lifecycle_verdict(
+        contract.status, contract.valid_from, contract.expires_at
+    )
+    if not verdict["current"]:
+        reason = {
+            "contract_not_active": "Runtime contract is not active.",
+            "contract_not_yet_valid": "Runtime contract is not yet valid.",
+            "contract_expired": "Runtime contract has expired.",
+        }.get(verdict["reason"], "Runtime contract is not valid.")
+        return ContractDecision(allowed=False, reason=reason, contract=contract)
     kind = kind.lower()
     action = action.upper()
     trajectory = list(previous) + [current]

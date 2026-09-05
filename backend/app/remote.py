@@ -27,6 +27,9 @@ def dispatch_via_broker(
     request_id: str,
     contract_id: Optional[str] = None,
     contract_version: Optional[int] = None,
+    contract_status: Optional[str] = None,
+    contract_valid_from: Optional[int] = None,
+    contract_expires_at: Optional[int] = None,
 ) -> dict[str, Any]:
     if not config.BROKER_URL:
         raise HTTPException(status_code=503, detail="Credential broker unavailable")
@@ -42,6 +45,9 @@ def dispatch_via_broker(
         payload=payload,
         contract_id=contract_id,
         contract_version=contract_version,
+        contract_status=contract_status,
+        contract_valid_from=contract_valid_from,
+        contract_expires_at=contract_expires_at,
     )
     try:
         response = httpx.post(

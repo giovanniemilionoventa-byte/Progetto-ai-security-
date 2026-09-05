@@ -79,6 +79,9 @@ def sign_eat(
     jti: Optional[str] = None,
     contract_id: Optional[str] = None,
     contract_version: Optional[int] = None,
+    contract_status: Optional[str] = None,
+    contract_valid_from: Optional[int] = None,
+    contract_expires_at: Optional[int] = None,
 ) -> str:
     issued = int(now if now is not None else utcnow().timestamp())
     ttl = int(ttl_seconds if ttl_seconds is not None else config.EAT_TTL_SECONDS)
@@ -100,6 +103,9 @@ def sign_eat(
         "param_hash": param_hash(scope, destination, payload),
         "contract_id": contract_id,
         "contract_version": contract_version,
+        "contract_status": contract_status,
+        "contract_valid_from": contract_valid_from,
+        "contract_expires_at": contract_expires_at,
     }
     return sign_claims(claims)
 

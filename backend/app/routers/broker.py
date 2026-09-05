@@ -9,8 +9,36 @@ from ..credentials import CredentialAccessDenied, broker
 from ..eat import EatError, param_hash, verify_eat
 from ..internal_auth import require_gateway_token
 from ..replay import replay_store
+from ..security import utcnow
 
 router = APIRouter(prefix="/internal/broker", tags=["credential-broker"])
+
+
+def _reject_contract() -> None:
+    raise HTTPException(status_code=401, detail="contract_rejected")
+
+
+def _enforce_contract_currency(claims: dict) -> None:
+    """Broker-side contract validity gate.
+
+    A signed EAT is not enough on its own: when the EAT is bound to a runtime
+    contract the broker requires a signed contract-status assertion showing the
+    contract was ACTIVE at issuance and that its temporal window still covers
+    the current time. The gateway re-verifies the contract against the database
+    immediately before signing, so a REVOKED / SUPERSEDED / EXPIRED contract
+    never produces a fresh EAT.
+    """
+    if claims.get("contract_status") != "ACTIVE":
+        _reject_contract()
+    clock = utcnow().timestamp()
+    valid_from = claims.get("contract_valid_from")
+    expires_at = claims.get("contract_expires_at")
+    if isinstance(valid_from, (int, float)) and not isinstance(valid_from, bool):
+        if clock < float(valid_from):
+            _reject_contract()
+    if isinstance(expires_at, (int, float)) and not isinstance(expires_at, bool):
+        if clock >= float(expires_at):
+            _reject_contract()
 
 
 class BrokerExecuteRequest(BaseModel):
@@ -96,6 +124,8 @@ def execute(body: BrokerExecuteRequest, _: None = Depends(require_gateway_token)
         raise HTTPException(status_code=401, detail="eat_rejected")
     if claims.get("contract_version") != body.contract_version:
         raise HTTPException(status_code=401, detail="eat_rejected")
+    if claims.get("contract_id") is not None:
+        _enforce_contract_currency(claims)
     if not replay_store.consume(claims["jti"], float(claims["exp"])):
         raise HTTPException(status_code=401, detail="eat_rejected")
 

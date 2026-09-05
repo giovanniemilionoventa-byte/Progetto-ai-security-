@@ -139,17 +139,28 @@ def authorize_request(
             db, agent, claimed_contract_id=claimed
         )
     except ContractResolutionError as exc:
-        if claimed or exc.reason not in {"not_found", "no_active_contract"}:
+        if exc.reason == "not_found":
+            if claimed:
+                decision = "BLOCK"
+                reason = (
+                    "Declared contract_id does not match the resolved runtime contract."
+                )
+        else:
             decision = "BLOCK"
             reason = {
+                "no_active_contract": (
+                    "No runtime contract is active for this agent."
+                    if not claimed
+                    else "Declared contract_id does not match the resolved runtime contract."
+                ),
+                "contract_not_yet_valid": "Runtime contract is not yet valid.",
+                "contract_expired": "Runtime contract has expired.",
                 "untrusted_contract_id": (
                     "Declared contract_id does not match the resolved runtime contract."
                 ),
                 "ambiguous_active_contract": "Runtime contract is ambiguous.",
                 "organization_mismatch": "Runtime contract organization mismatch.",
                 "agent_mismatch": "Runtime contract agent mismatch.",
-                "not_found": "Declared contract_id does not match the resolved runtime contract.",
-                "no_active_contract": "Declared contract_id does not match the resolved runtime contract.",
             }.get(exc.reason, "Runtime contract cannot be resolved.")
             contract = None
     else:

@@ -103,6 +103,53 @@ def _parse_datetime(value: Any, label: str) -> Optional[datetime]:
     return parsed.astimezone(timezone.utc)
 
 
+def coerce_utc(value: Any) -> Optional[datetime]:
+    """Normalize a datetime (or ISO string) to an aware UTC datetime.
+
+    Naive datetimes read back from storage are interpreted as UTC so that
+    temporal comparisons against an aware clock stay deterministic.
+    """
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        if value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value.astimezone(timezone.utc)
+    if isinstance(value, str):
+        return _parse_datetime(value, "contract")
+    raise ContractValidationError("contract timestamp is invalid")
+
+
+def contract_lifecycle_verdict(
+    status: Any,
+    valid_from: Any = None,
+    expires_at: Any = None,
+    now: Any = None,
+) -> dict:
+    """Deterministic lifecycle and temporal verdict for a contract.
+
+    Only an ACTIVE contract that currently sits inside its temporal window
+    (valid_from <= now < expires_at) is current. Any other status, or an
+    ACTIVE contract outside its window, is not current and must never grant
+    authority. No fallback, no LLM/NLP, no side effects.
+    """
+    current_time = coerce_utc(now) if now is not None else datetime.now(timezone.utc)
+    start = coerce_utc(valid_from)
+    end = coerce_utc(expires_at)
+    state = "DRAFT"
+    if isinstance(status, str):
+        candidate = status.strip().upper()
+        if candidate in CONTRACT_STATUSES:
+            state = candidate
+    if state != "ACTIVE":
+        return {"status": state, "current": False, "reason": "contract_not_active"}
+    if start is not None and current_time < start:
+        return {"status": state, "current": False, "reason": "contract_not_yet_valid"}
+    if end is not None and current_time >= end:
+        return {"status": state, "current": False, "reason": "contract_expired"}
+    return {"status": state, "current": True, "reason": None}
+
+
 def _validate_status(value: Any) -> str:
     if not isinstance(value, str):
         raise ContractValidationError("status is invalid")

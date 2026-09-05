@@ -1,10 +1,14 @@
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from .. import config, models, schemas
+from ..contract_store import ContractResolutionError, assert_contract_current_for_dispatch
 from ..database import get_db
 from ..engines.enforcement import authorize_request
 from ..remote import dispatch_via_broker
+from ..runtime_contract import coerce_utc
 from ..security import get_agent_from_token
 
 router = APIRouter(prefix="/gateway", tags=["enforcement-plane"])
@@ -19,6 +23,12 @@ TOOL_MAP = {
         },
     }
 }
+
+
+def _claim_epoch(value) -> Optional[int]:
+    if value is None:
+        return None
+    return int(coerce_utc(value).timestamp())
 
 
 def _harness_execute(
@@ -70,6 +80,29 @@ def invoke_tool(
     executed = False
     tool_result = None
 
+    contract_status = None
+    contract_valid_from = None
+    contract_expires_at = None
+    if event.decision == "ALLOW" and not outcome.replayed and outcome.contract_id is not None:
+        try:
+            current = assert_contract_current_for_dispatch(
+                db,
+                agent.organization_id,
+                agent.id,
+                outcome.contract_id,
+                outcome.contract_version,
+            )
+        except ContractResolutionError:
+            current = None
+        if current is None:
+            event.decision = "BLOCK"
+            event.reason = "Runtime contract is no longer valid at execution time."
+            db.commit()
+        else:
+            contract_status = current.status
+            contract_valid_from = _claim_epoch(current.valid_from)
+            contract_expires_at = _claim_epoch(current.expires_at)
+
     if event.decision == "ALLOW" and not outcome.replayed:
         try:
             if config.BROKER_URL:
@@ -85,6 +118,9 @@ def invoke_tool(
                     request_id=event.request_id,
                     contract_id=outcome.contract_id,
                     contract_version=outcome.contract_version,
+                    contract_status=contract_status,
+                    contract_valid_from=contract_valid_from,
+                    contract_expires_at=contract_expires_at,
                 )
             else:
                 tool_result = _harness_execute(
