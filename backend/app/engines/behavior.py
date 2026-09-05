@@ -227,22 +227,9 @@ def load_enabled_patterns(db: Session, organization_id: str) -> list[models.Beha
 
 
 def reconstruct_trajectory(db: Session, execution_id: str) -> list[TrajectoryStep]:
-    events = (
-        db.query(models.Event)
-        .filter(models.Event.execution_id == execution_id)
-        .order_by(models.Event.seq.asc(), models.Event.created_at.asc())
-        .all()
-    )
-    return [
-        TrajectoryStep(
-            resource_kind=event.resource_kind,
-            action=event.action,
-            scope=event.scope,
-            destination=event.destination,
-            decision=event.decision,
-        )
-        for event in events
-    ]
+    from .trajectory import reconstruct_trajectory as reconstruct_owned_trajectory
+
+    return reconstruct_owned_trajectory(db, execution_id)
 
 
 def get_or_create_execution(
