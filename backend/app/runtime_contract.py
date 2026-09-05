@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Optional
 
@@ -424,4 +425,102 @@ def validate_runtime_contract(document: Any) -> dict:
         "valid_from": valid_from,
         "expires_at": expires_at,
         "integrity": integrity,
+    }
+
+
+class ContractWorkflowError(ValueError):
+    def __init__(self, detail: str):
+        super().__init__(detail)
+        self.detail = detail
+
+
+@dataclass
+class ContractWorkflow:
+    initial_steps: list[str]
+    steps: list[dict]
+    transitions: list[dict]
+    terminal_steps: list[str]
+
+    def step_ids(self) -> set[str]:
+        return {step["id"] for step in self.steps}
+
+    def get_step(self, step_id: str) -> dict:
+        for step in self.steps:
+            if step["id"] == step_id:
+                return step
+        raise ContractWorkflowError("unknown_step")
+
+    def is_initial(self, step_id: str) -> bool:
+        return step_id in self.initial_steps
+
+    def is_terminal(self, step_id: str) -> bool:
+        return step_id in self.terminal_steps
+
+    def transitions_from(self, step_id: str) -> list[dict]:
+        return [item for item in self.transitions if item["from"] == step_id]
+
+    def allowed_targets(self, step_id: str) -> list[str]:
+        return [item["to"] for item in self.transitions_from(step_id)]
+
+    def allows_transition(self, source: str, target: str) -> bool:
+        return any(
+            item["from"] == source and item["to"] == target for item in self.transitions
+        )
+
+
+def _workflow_payload(value: Any) -> Optional[dict]:
+    if value is None:
+        return None
+    if hasattr(value, "workflow"):
+        return getattr(value, "workflow")
+    if isinstance(value, dict):
+        if "initial_steps" in value or "steps" in value:
+            return value
+        return value.get("workflow")
+    return None
+
+
+def load_contract_workflow(value: Any) -> Optional[ContractWorkflow]:
+    payload = _workflow_payload(value)
+    if payload is None:
+        return None
+    cleaned = _validate_workflow(payload)
+    if cleaned is None:
+        return None
+    workflow = ContractWorkflow(
+        initial_steps=list(cleaned["initial_steps"]),
+        steps=list(cleaned["steps"]),
+        transitions=list(cleaned["transitions"]),
+        terminal_steps=list(cleaned["terminal_steps"]),
+    )
+    assert_workflow_usable(workflow)
+    return workflow
+
+
+def assert_workflow_usable(workflow: ContractWorkflow) -> ContractWorkflow:
+    if not workflow.steps:
+        raise ContractWorkflowError("workflow_unusable")
+    known = workflow.step_ids()
+    if not workflow.initial_steps or not workflow.terminal_steps:
+        raise ContractWorkflowError("workflow_unusable")
+    if any(step_id not in known for step_id in workflow.initial_steps):
+        raise ContractWorkflowError("workflow_unusable")
+    if any(step_id not in known for step_id in workflow.terminal_steps):
+        raise ContractWorkflowError("workflow_unusable")
+    for item in workflow.transitions:
+        if item.get("from") not in known or item.get("to") not in known:
+            raise ContractWorkflowError("invalid_transition")
+    return workflow
+
+
+def correlate_trajectory_with_workflow(
+    workflow: Optional[ContractWorkflow],
+    trajectory: list,
+) -> dict:
+    steps = list(trajectory or [])
+    return {
+        "has_workflow": workflow is not None,
+        "trajectory_length": len(steps),
+        "initial_steps": list(workflow.initial_steps) if workflow else [],
+        "terminal_steps": list(workflow.terminal_steps) if workflow else [],
     }

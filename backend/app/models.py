@@ -8,10 +8,12 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import relationship
 
@@ -308,5 +310,13 @@ class RuntimeContract(Base):
             "contract_id",
             "version",
             name="uq_runtime_contract_identity",
+        ),
+        Index(
+            "uq_runtime_contract_one_active_per_agent",
+            "organization_id",
+            "agent_id",
+            unique=True,
+            sqlite_where=text("status = 'ACTIVE'"),
+            postgresql_where=text("status = 'ACTIVE'"),
         ),
     )

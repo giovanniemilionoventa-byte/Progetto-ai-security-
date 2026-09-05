@@ -34,6 +34,28 @@ def ensure_schema() -> None:
             conn.execute(
                 text("ALTER TABLE events ADD COLUMN seq INTEGER DEFAULT 0 NOT NULL")
             )
+        tables = {
+            row[0]
+            for row in conn.execute(
+                text("SELECT name FROM sqlite_master WHERE type='table'")
+            ).fetchall()
+        }
+        if "runtime_contracts" in tables:
+            indexes = {
+                row[1]
+                for row in conn.execute(
+                    text("PRAGMA index_list(runtime_contracts)")
+                ).fetchall()
+            }
+            if "uq_runtime_contract_one_active_per_agent" not in indexes:
+                conn.execute(
+                    text(
+                        "CREATE UNIQUE INDEX IF NOT EXISTS "
+                        "uq_runtime_contract_one_active_per_agent "
+                        "ON runtime_contracts (organization_id, agent_id) "
+                        "WHERE status = 'ACTIVE'"
+                    )
+                )
 
 
 def get_db():
