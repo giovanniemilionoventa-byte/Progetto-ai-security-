@@ -193,6 +193,7 @@ class Event(Base):
     action = Column(String, nullable=False)
     scope = Column(String, nullable=False)
     destination = Column(String, nullable=True)
+    payload_hash = Column(String, nullable=True)
     decision = Column(String, nullable=False)
     risk_score = Column(Float, nullable=False, default=0.0)
     risk_level = Column(String, nullable=False, default="low")

@@ -1,4 +1,6 @@
 from dataclasses import dataclass, field
+import hashlib
+import json
 from typing import Optional
 from uuid import uuid4
 
@@ -40,6 +42,31 @@ def _maybe_alert(db: Session, event: models.Event) -> None:
         )
 
 
+def _effective_payload(body: schemas.AuthorizeRequest) -> Optional[dict]:
+    """Payload that actually reaches runtime-contract data checks.
+
+    Mirrors authorize_request resolution: body.payload wins, otherwise the
+    metadata payload fallback. Only dict or None is enforceable; anything else
+    is treated as absent (the contract layer already filters the same way).
+    """
+    payload = body.payload
+    if payload is None and isinstance(body.metadata, dict):
+        payload = body.metadata.get("payload")
+    if payload is None or isinstance(payload, dict):
+        return payload
+    return None
+
+
+def _payload_digest(payload: Optional[dict]) -> str:
+    if payload is None:
+        raw = "null"
+    else:
+        raw = json.dumps(
+            payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True
+        )
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
 def _idempotent_payload_matches(
     event: models.Event, body: schemas.AuthorizeRequest
 ) -> bool:
@@ -53,6 +80,9 @@ def _idempotent_payload_matches(
         return False
     if body.execution_id and event.execution_id and body.execution_id != event.execution_id:
         return False
+    if event.payload_hash is not None:
+        if event.payload_hash != _payload_digest(_effective_payload(body)):
+            return False
     return True
 
 
@@ -214,6 +244,7 @@ def authorize_request(
         action=act,
         scope=body.scope,
         destination=body.destination,
+        payload_hash=_payload_digest(_effective_payload(body)),
         decision=decision,
         risk_score=risk.score,
         risk_level=risk.level,
