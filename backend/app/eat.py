@@ -151,6 +151,8 @@ def verify_eat(token: str, *, now: Optional[int] = None) -> dict[str, Any]:
     for field in required:
         if not claims.get(field):
             raise EatError("missing_claim")
+    if "destination" not in claims:
+        raise EatError("missing_claim")
     if "contract_id" not in claims or "contract_version" not in claims:
         raise EatError("missing_claim")
     contract_id = claims.get("contract_id")

@@ -109,9 +109,9 @@ def invoke_tool(
                 tool_result = dispatch_via_broker(
                     tool=tool_name,
                     operation=op,
-                    scope=body.scope,
-                    destination=body.destination,
-                    payload=body.payload,
+                    scope=event.scope,
+                    destination=event.destination,
+                    payload=outcome.authorized_payload,
                     org_id=agent.organization_id,
                     agent_id=agent.id,
                     execution_id=event.execution_id,
@@ -124,7 +124,11 @@ def invoke_tool(
                 )
             else:
                 tool_result = _harness_execute(
-                    tool_name, op, body.scope, body.payload, agent.organization_id
+                    tool_name,
+                    op,
+                    event.scope,
+                    outcome.authorized_payload,
+                    agent.organization_id,
                 )
             executed = True
         except HTTPException:

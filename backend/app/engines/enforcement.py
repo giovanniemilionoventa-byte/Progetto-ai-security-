@@ -26,6 +26,7 @@ class AuthorizationOutcome:
     replayed: bool = False
     contract_id: Optional[str] = None
     contract_version: Optional[int] = None
+    authorized_payload: Optional[dict] = None
 
 
 def _maybe_alert(db: Session, event: models.Event) -> None:
@@ -116,6 +117,7 @@ def authorize_request(
             event=existing,
             approval_id=approval.id if approval else None,
             replayed=True,
+            authorized_payload=_effective_payload(body),
         )
 
     try:
@@ -281,4 +283,5 @@ def authorize_request(
         matches=matches,
         contract_id=contract.contract_id if contract else None,
         contract_version=contract.version if contract else None,
+        authorized_payload=_effective_payload(body),
     )
