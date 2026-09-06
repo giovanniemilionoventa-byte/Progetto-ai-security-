@@ -287,6 +287,7 @@ def evaluate_contract(
     previous: list[TrajectoryStep],
     current: TrajectoryStep,
     claimed_contract_id: Optional[str] = None,
+    authorized_previous: Optional[list[TrajectoryStep]] = None,
 ) -> ContractDecision:
     if claimed_contract_id is not None and claimed_contract_id != contract.contract_id:
         return ContractDecision(
@@ -307,12 +308,15 @@ def evaluate_contract(
     kind = kind.lower()
     action = action.upper()
     trajectory = list(previous) + [current]
+    workflow_previous = (
+        authorized_previous if authorized_previous is not None else previous
+    )
     checks = (
         _evaluate_capabilities(contract, kind, action),
         _evaluate_resources(contract, kind, scope, destination),
         _evaluate_constraints(contract, destination, payload, trajectory),
         _evaluate_data_constraints(contract, payload),
-        _evaluate_workflow(contract, previous, current),
+        _evaluate_workflow(contract, workflow_previous, current),
     )
     for reason in checks:
         if reason:

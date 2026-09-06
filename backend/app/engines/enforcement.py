@@ -13,6 +13,7 @@ from . import contract as contract_engine
 from . import permission as permission_engine
 from . import policy as policy_engine
 from . import risk as risk_engine
+from . import trajectory as trajectory_engine
 
 
 @dataclass
@@ -115,6 +116,18 @@ def authorize_request(
     trajectory = previous + [current]
     matches = behavior_engine.evaluate(db, agent, trajectory)
 
+    trajectory_state = trajectory_engine.reconstruct_trajectory_state(
+        db,
+        execution.id,
+        organization_id=agent.organization_id,
+        agent_id=agent.id,
+    )
+    authorized_progress = (
+        trajectory_engine.authorized_trajectory(trajectory_state)
+        if trajectory_state is not None
+        else []
+    )
+
     policy_result = policy_engine.evaluate(
         db,
         agent,
@@ -175,6 +188,7 @@ def authorize_request(
             previous=previous,
             current=current,
             claimed_contract_id=claimed,
+            authorized_previous=authorized_progress,
         )
         if not verdict.allowed:
             if decision != "BLOCK":
