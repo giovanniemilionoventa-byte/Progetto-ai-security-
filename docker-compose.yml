@@ -3,6 +3,7 @@ name: aegis
 networks:
   agent_net:
     driver: bridge
+    internal: true
   broker_net:
     driver: bridge
     internal: true

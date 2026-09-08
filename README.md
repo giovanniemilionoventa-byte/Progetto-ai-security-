@@ -105,7 +105,7 @@ Flow: Agent → Gateway (`authorize_request`, EAT sign) → Broker (EAT verify, 
 
 | Flow | Compose attachment |
 | --- | --- |
-| Agent → Gateway | ALLOW (`agent_net`) |
+| Agent → Gateway | ALLOW (`agent_net`, internal) |
 | Agent → Broker / Tool / CP / DB | DENY |
 | Gateway → Broker | ALLOW (`broker_net`, internal) |
 | Gateway → Tool | DENY (gateway not on `tool_net`) |
@@ -116,6 +116,18 @@ IMPLEMENTED: process split, EAT HMAC-SHA256 with `AEGIS_EAT_KEY`, CAN USE ≠ CA
 NOT IMPLEMENTED: CP/Gateway SQL privilege isolation (shared SQLite volume), mTLS.
 
 NOT VERIFIED: L3 runtime reachability unless Docker daemon is present. Compose YAML is a contract, not a live probe.
+
+## Execution boundary (Phase 13.A)
+
+Attack matrix: `docs/PHASE_13A_EXECUTION_BOUNDARY.md`. Tests: `backend/tests/test_phase13a_execution_boundary.py`.
+
+A Gateway 403/401 is APPLICATION_BLOCK, not proof of network isolation.
+
+Execution Boundary: NOT VERIFIED at L3/runtime level in the environment that produced this checkpoint (no Docker daemon, no Agent namespace).
+
+Phase 13.B live Docker attempt: `docs/PHASE_13B_LIVE_DOCKER_BOUNDARY.md`. Docker CLI/daemon still absent; Agent-namespace probe was not executed. L3/RUNTIME VERIFICATION = NOT VERIFIED.
+
+Phase 13.C remediation: `docs/PHASE_13C_EXECUTION_BOUNDARY_REMEDIATION.md`. `agent_net` is `internal: true`. Host ports, shared SQLite, and probe hostnames assessed (ACCEPT/DEFER). L3/RUNTIME remains NOT VERIFIED.
 
 FUTURE: PostgreSQL roles, mTLS, secret store other than env.
 

@@ -12,7 +12,7 @@ TOOL_NETWORK = "tool_net"
 PUBLIC_NETWORK = "public_net"
 
 NETWORKS = {
-    AGENT_NETWORK: {"internal": False, "purpose": "agent to gateway only"},
+    AGENT_NETWORK: {"internal": True, "purpose": "agent to gateway only"},
     BROKER_NETWORK: {
         "internal": True,
         "purpose": "gateway to credential broker",
