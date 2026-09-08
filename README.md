@@ -131,6 +131,8 @@ Phase 13.C remediation: `docs/PHASE_13C_EXECUTION_BOUNDARY_REMEDIATION.md`. `age
 
 Phase 13.D credential isolation: `docs/PHASE_13D_CREDENTIAL_ISOLATION.md`. Nested tool output echoing CRM_SECRET is rejected (502). Application-level isolation tested; runtime secret isolation NOT VERIFIED.
 
+Phase 13.E runtime residual validation: `docs/PHASE_13E_RUNTIME_BOUNDARY_VALIDATION.md`. Docker still absent. RUNTIME VERIFICATION: NOT VERIFIED. Verdict: NOT VERIFIED.
+
 FUTURE: PostgreSQL roles, mTLS, secret store other than env.
 
 ## Principles
