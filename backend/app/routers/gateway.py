@@ -40,7 +40,12 @@ def _harness_execute(
     cred = broker.issue(tool, organization_id=organization_id)
     if tool != "crm":
         raise HTTPException(status_code=400, detail=f"Unsupported tool '{tool}'")
-    return protected_crm.execute(operation, cred.secret, scope=scope, payload=payload)
+    result = protected_crm.execute(operation, cred.secret, scope=scope, payload=payload)
+    from ..credentials import contains_tool_secret
+
+    if contains_tool_secret(result):
+        raise HTTPException(status_code=502, detail="Protected tool returned unsafe payload")
+    return result
 
 
 @router.post("/tools/{tool}/{operation}", response_model=schemas.GatewayResponse)

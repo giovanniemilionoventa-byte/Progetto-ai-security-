@@ -1,5 +1,6 @@
 from collections.abc import Mapping
 from dataclasses import dataclass
+from typing import Any
 
 from . import config
 
@@ -50,3 +51,23 @@ class CredentialBroker:
 
 
 broker = CredentialBroker()
+
+
+def contains_tool_secret(value: Any) -> bool:
+    secret = config.CRM_SECRET
+    if not secret:
+        return False
+    return _contains_secret(value, secret)
+
+
+def _contains_secret(value: Any, secret: str) -> bool:
+    if isinstance(value, str):
+        return secret in value
+    if isinstance(value, dict):
+        return any(
+            _contains_secret(key, secret) or _contains_secret(item, secret)
+            for key, item in value.items()
+        )
+    if isinstance(value, (list, tuple, set)):
+        return any(_contains_secret(item, secret) for item in value)
+    return False

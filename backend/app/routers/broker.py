@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from .. import config
-from ..credentials import CredentialAccessDenied, broker
+from ..credentials import CredentialAccessDenied, broker, contains_tool_secret
 from ..eat import EatError, param_hash, verify_eat
 from ..internal_auth import require_gateway_token
 from ..replay import replay_store
@@ -57,7 +57,14 @@ class BrokerExecuteRequest(BaseModel):
 
 
 def _sanitize(result: dict[str, Any]) -> dict[str, Any]:
-    return {key: value for key, value in result.items() if key not in {"secret", "eat", "token"}}
+    cleaned = {
+        key: value
+        for key, value in result.items()
+        if key not in {"secret", "eat", "token"}
+    }
+    if contains_tool_secret(cleaned):
+        raise HTTPException(status_code=502, detail="Protected tool returned unsafe payload")
+    return cleaned
 
 
 def _tool_headers() -> dict[str, str]:

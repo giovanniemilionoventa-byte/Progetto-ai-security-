@@ -3,6 +3,7 @@ from typing import Any, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
+from ..credentials import contains_tool_secret
 from ..internal_auth import require_tool_token
 from ..protected.crm import InvalidToolCredential, protected_crm
 
@@ -33,4 +34,7 @@ def invoke_tool(
         )
     except InvalidToolCredential as exc:
         raise HTTPException(status_code=401, detail="invalid_tool_credential") from exc
-    return {key: value for key, value in result.items() if key != "secret"}
+    cleaned = {key: value for key, value in result.items() if key != "secret"}
+    if contains_tool_secret(cleaned):
+        raise HTTPException(status_code=502, detail="Protected tool returned unsafe payload")
+    return cleaned

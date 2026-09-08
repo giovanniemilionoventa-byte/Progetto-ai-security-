@@ -4,6 +4,7 @@ import httpx
 from fastapi import HTTPException
 
 from . import config
+from .credentials import contains_tool_secret
 from .eat import sign_eat
 
 
@@ -75,5 +76,7 @@ def dispatch_via_broker(
         raise HTTPException(status_code=502, detail="Credential broker denied execute")
     body = response.json()
     if isinstance(body, dict) and ("secret" in body or "eat" in body):
+        raise HTTPException(status_code=502, detail="Credential broker returned unsafe payload")
+    if contains_tool_secret(body):
         raise HTTPException(status_code=502, detail="Credential broker returned unsafe payload")
     return body

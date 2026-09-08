@@ -129,6 +129,8 @@ Phase 13.B live Docker attempt: `docs/PHASE_13B_LIVE_DOCKER_BOUNDARY.md`. Docker
 
 Phase 13.C remediation: `docs/PHASE_13C_EXECUTION_BOUNDARY_REMEDIATION.md`. `agent_net` is `internal: true`. Host ports, shared SQLite, and probe hostnames assessed (ACCEPT/DEFER). L3/RUNTIME remains NOT VERIFIED.
 
+Phase 13.D credential isolation: `docs/PHASE_13D_CREDENTIAL_ISOLATION.md`. Nested tool output echoing CRM_SECRET is rejected (502). Application-level isolation tested; runtime secret isolation NOT VERIFIED.
+
 FUTURE: PostgreSQL roles, mTLS, secret store other than env.
 
 ## Principles
