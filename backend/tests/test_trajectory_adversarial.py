@@ -23,6 +23,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app import models, schemas
 from app.contract_store import save_contract, transition_contract_status
+from app.services.evidence_verifier import backfill_execution_evidence
 from app.database import Base
 from app.engines.enforcement import authorize_request
 from app.engines.trajectory import reconstruct_trajectory_state
@@ -752,6 +753,9 @@ def test_m_order_is_deterministic_and_block_interleaving_is_inert():
     _add_event(db, "exec-order-m", 1, "crm", "READ", "customers", "ALLOW", "req-read-1")
     _add_event(db, "exec-order-m", 2, "email", "SEND", "external", "ALLOW", "req-ext-2")
     _add_event(db, "exec-order-m", 3, "email", "SEND", "internal", "BLOCK", "req-blk-3")
+    db.commit()
+    # Phase 17: seal the hand-built history so it is valid evidence, not tamper.
+    backfill_execution_evidence(db, "exec-order-m")
     db.commit()
     state = reconstruct_trajectory_state(db, "exec-order-m")
     assert [item.seq for item in state.events] == [0, 1, 2, 3]

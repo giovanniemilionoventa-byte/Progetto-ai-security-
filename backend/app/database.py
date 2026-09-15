@@ -40,6 +40,27 @@ def ensure_schema() -> None:
             conn.execute(
                 text("ALTER TABLE events ADD COLUMN previous_evidence_hash VARCHAR")
             )
+        approval_rows = conn.execute(text("PRAGMA table_info(approvals)")).fetchall()
+        approval_cols = {row[1] for row in approval_rows}
+        for column, ddl in (
+            ("execution_id", "ALTER TABLE approvals ADD COLUMN execution_id VARCHAR"),
+            ("request_id", "ALTER TABLE approvals ADD COLUMN request_id VARCHAR"),
+            ("contract_id", "ALTER TABLE approvals ADD COLUMN contract_id VARCHAR"),
+            (
+                "contract_version",
+                "ALTER TABLE approvals ADD COLUMN contract_version INTEGER",
+            ),
+            ("param_hash", "ALTER TABLE approvals ADD COLUMN param_hash VARCHAR"),
+            ("expires_at", "ALTER TABLE approvals ADD COLUMN expires_at DATETIME"),
+            ("consumed_at", "ALTER TABLE approvals ADD COLUMN consumed_at DATETIME"),
+            (
+                "consumed_event_id",
+                "ALTER TABLE approvals ADD COLUMN consumed_event_id VARCHAR",
+            ),
+        ):
+            if column not in approval_cols and approval_rows:
+                conn.execute(text(ddl))
+
         exec_rows = conn.execute(text("PRAGMA table_info(executions)")).fetchall()
         exec_cols = {row[1] for row in exec_rows}
         if "evidence_chain_tip" not in exec_cols:

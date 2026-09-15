@@ -279,6 +279,23 @@ class Approval(Base):
     created_at = Column(DateTime, default=utcnow)
     reviewed_at = Column(DateTime, nullable=True)
 
+    # Phase 17 — an approval authorizes one specific request, once.
+    #
+    # Before this, approving only set status='approved' and nothing read it: an
+    # approved action could never execute. Now the grant carries the full
+    # binding of the request it authorizes, so a human approving "send this
+    # email to this address with this body" cannot be turned into authority for
+    # a different destination, different parameters, a different execution, or a
+    # second run.
+    execution_id = Column(String, ForeignKey("executions.id"), nullable=True, index=True)
+    request_id = Column(String, nullable=True, index=True)
+    contract_id = Column(String, nullable=True)
+    contract_version = Column(Integer, nullable=True)
+    param_hash = Column(String, nullable=True)
+    expires_at = Column(DateTime, nullable=True)
+    consumed_at = Column(DateTime, nullable=True)
+    consumed_event_id = Column(String, nullable=True)
+
     organization = relationship("Organization", back_populates="approvals")
 
 

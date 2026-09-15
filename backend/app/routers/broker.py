@@ -5,7 +5,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from .. import config
-from ..credentials import CredentialAccessDenied, broker, contains_tool_secret
+from ..credentials import (
+    CredentialAccessDenied,
+    broker,
+    contains_any_tool_secret,
+)
 from ..eat import EatError, param_hash, verify_eat
 from ..internal_auth import require_gateway_token
 from ..replay import replay_store
@@ -56,13 +60,13 @@ class BrokerExecuteRequest(BaseModel):
     contract_version: Optional[int] = None
 
 
-def _sanitize(result: dict[str, Any]) -> dict[str, Any]:
+def _sanitize(result: dict[str, Any], organization_id: str | None = None) -> dict[str, Any]:
     cleaned = {
         key: value
         for key, value in result.items()
         if key not in {"secret", "eat", "token"}
     }
-    if contains_tool_secret(cleaned):
+    if contains_any_tool_secret(cleaned, organization_id):
         raise HTTPException(status_code=502, detail="Protected tool returned unsafe payload")
     return cleaned
 
@@ -74,20 +78,38 @@ def _tool_headers() -> dict[str, str]:
     return headers
 
 
-def _call_tool(tool: str, operation: str, scope: str, payload: dict | None, secret: str) -> dict:
+def _call_tool(
+    tool: str,
+    operation: str,
+    scope: str,
+    payload: dict | None,
+    secret: str,
+    organization_id: str,
+) -> dict:
     if not config.TOOL_URL:
         from ..protected.crm import InvalidToolCredential, protected_crm
 
         if tool != "crm":
             raise HTTPException(status_code=400, detail="Unknown protected tool")
         try:
-            return protected_crm.execute(operation, secret, scope=scope, payload=payload)
+            return protected_crm.execute(
+                operation,
+                secret,
+                scope=scope,
+                payload=payload,
+                organization_id=organization_id,
+            )
         except InvalidToolCredential as exc:
             raise HTTPException(status_code=502, detail="tool_rejected") from exc
     try:
         response = httpx.post(
             f"{config.TOOL_URL.rstrip('/')}/internal/tools/{tool}/{operation}",
-            json={"secret": secret, "scope": scope, "payload": payload or {}},
+            json={
+                "secret": secret,
+                "scope": scope,
+                "payload": payload or {},
+                "organization_id": organization_id,
+            },
             headers=_tool_headers(),
             timeout=config.REMOTE_TIMEOUT_SECONDS,
         )
@@ -141,5 +163,14 @@ def execute(body: BrokerExecuteRequest, _: None = Depends(require_gateway_token)
     except CredentialAccessDenied as exc:
         raise HTTPException(status_code=403, detail="credential_denied") from exc
 
-    result = _call_tool(body.tool, body.operation, body.scope, body.payload, cred.secret)
-    return _sanitize(result if isinstance(result, dict) else {"ok": True})
+    result = _call_tool(
+        body.tool,
+        body.operation,
+        body.scope,
+        body.payload,
+        cred.secret,
+        body.org_id,
+    )
+    return _sanitize(
+        result if isinstance(result, dict) else {"ok": True}, body.org_id
+    )

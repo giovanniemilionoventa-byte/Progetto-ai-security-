@@ -1,0 +1,684 @@
+{
+  "agent_kind": "REFERENCE_AGENT",
+  "agent_transcript": {
+    "agent_kind": "REFERENCE_AGENT",
+    "captured_at": "2026-09-15T18:56:12.017619+00:00",
+    "evaluation": {
+      "checks": [
+        {
+          "check": "agent cannot reach credential-broker directly",
+          "detail": "classification=NETWORK_BLOCK observed=DNS_FAILURE: [Errno -3] Temporary failure in name resolution",
+          "ok": true
+        },
+        {
+          "check": "agent cannot reach protected-tool directly",
+          "detail": "classification=NETWORK_BLOCK observed=DNS_FAILURE: [Errno -3] Temporary failure in name resolution",
+          "ok": true
+        },
+        {
+          "check": "agent cannot reach control-plane directly",
+          "detail": "classification=NETWORK_BLOCK observed=DNS_FAILURE: [Errno -3] Temporary failure in name resolution",
+          "ok": true
+        },
+        {
+          "check": "permitted action reaches the protected tool",
+          "detail": "decision=ALLOW executed=True",
+          "ok": true
+        },
+        {
+          "check": "forbidden action is blocked and does not execute",
+          "detail": "decision=BLOCK executed=False",
+          "ok": true
+        },
+        {
+          "check": "action needing a human does not execute on request",
+          "detail": "decision=APPROVAL executed=False",
+          "ok": true
+        },
+        {
+          "check": "approved request cannot be mutated",
+          "detail": "http=409 executed=False",
+          "ok": true
+        },
+        {
+          "check": "approved action executes after a human grants it",
+          "detail": "decision=ALLOW executed=True",
+          "ok": true
+        },
+        {
+          "check": "approval cannot be reused",
+          "detail": "executed=False",
+          "ok": true
+        },
+        {
+          "check": "credential extraction attempt returns no secret",
+          "detail": "contains_secret_key=False",
+          "ok": true
+        },
+        {
+          "check": "agent cannot adopt another agent's execution",
+          "detail": "http=403 reason=None",
+          "ok": true
+        },
+        {
+          "check": "contract data constraints block a denied field",
+          "detail": "decision=BLOCK reason=Payload contains fields denied by the runtime contract.",
+          "ok": true
+        },
+        {
+          "check": "agent holds no protected credentials",
+          "detail": "{\"uid\": 10001, \"gid\": 10001, \"hostname\": \"42d421591eff\", \"has_agent_token\": true, \"holds_tool_credential\": false, \"holds_eat_key\": false, \"holds_internal_token\": false}",
+          "ok": true
+        }
+      ],
+      "failed": [],
+      "passed": 13,
+      "total": 13,
+      "verdict": "PASS"
+    },
+    "execution_id": "ref-exec-1789498569",
+    "gateway": "http://enforcement-gateway:8000",
+    "identity": {
+      "gid": 10001,
+      "has_agent_token": true,
+      "holds_eat_key": false,
+      "holds_internal_token": false,
+      "holds_tool_credential": false,
+      "hostname": "42d421591eff",
+      "uid": 10001
+    },
+    "readedge_integration": "NOT_PRESENT",
+    "schema": "aegis.reference_agent.transcript/v1",
+    "steps": [
+      {
+        "at": "2026-09-15T18:56:09.630955+00:00",
+        "boundary_level": "NETWORK",
+        "by_ip": {
+          "172.19.0.2": {
+            "classification": "NETWORK_BLOCK",
+            "elapsed_ms": 0.07,
+            "errno": 101,
+            "observed": "ENETUNREACH",
+            "resolved_to": [
+              "172.19.0.2"
+            ],
+            "target": "172.19.0.2:8000"
+          },
+          "172.20.0.3": {
+            "classification": "NETWORK_BLOCK",
+            "elapsed_ms": 0.02,
+            "errno": 101,
+            "observed": "ENETUNREACH",
+            "resolved_to": [
+              "172.20.0.3"
+            ],
+            "target": "172.20.0.3:8000"
+          }
+        },
+        "by_name": {
+          "classification": "DNS_BLOCK",
+          "elapsed_ms": 2.47,
+          "observed": "DNS_FAILURE: [Errno -3] Temporary failure in name resolution",
+          "target": "credential-broker:8000"
+        },
+        "classification": "NETWORK_BLOCK",
+        "expected": "NETWORK_BLOCK",
+        "intent": "reach credential-broker directly, bypassing the gateway",
+        "observed": "DNS_FAILURE: [Errno -3] Temporary failure in name resolution",
+        "ok": true,
+        "step": "direct::credential-broker",
+        "target": "credential-broker:8000"
+      },
+      {
+        "at": "2026-09-15T18:56:09.631549+00:00",
+        "boundary_level": "NETWORK",
+        "by_ip": {
+          "172.20.0.2": {
+            "classification": "NETWORK_BLOCK",
+            "elapsed_ms": 0.04,
+            "errno": 101,
+            "observed": "ENETUNREACH",
+            "resolved_to": [
+              "172.20.0.2"
+            ],
+            "target": "172.20.0.2:8000"
+          }
+        },
+        "by_name": {
+          "classification": "DNS_BLOCK",
+          "elapsed_ms": 0.52,
+          "observed": "DNS_FAILURE: [Errno -3] Temporary failure in name resolution",
+          "target": "protected-tool:8000"
+        },
+        "classification": "NETWORK_BLOCK",
+        "expected": "NETWORK_BLOCK",
+        "intent": "reach protected-tool directly, bypassing the gateway",
+        "observed": "DNS_FAILURE: [Errno -3] Temporary failure in name resolution",
+        "ok": true,
+        "step": "direct::protected-tool",
+        "target": "protected-tool:8000"
+      },
+      {
+        "at": "2026-09-15T18:56:09.632030+00:00",
+        "boundary_level": "NETWORK",
+        "by_ip": {
+          "172.18.0.2": {
+            "classification": "NETWORK_BLOCK",
+            "elapsed_ms": 0.03,
+            "errno": 101,
+            "observed": "ENETUNREACH",
+            "resolved_to": [
+              "172.18.0.2"
+            ],
+            "target": "172.18.0.2:8000"
+          }
+        },
+        "by_name": {
+          "classification": "DNS_BLOCK",
+          "elapsed_ms": 0.43,
+          "observed": "DNS_FAILURE: [Errno -3] Temporary failure in name resolution",
+          "target": "control-plane:8000"
+        },
+        "classification": "NETWORK_BLOCK",
+        "expected": "NETWORK_BLOCK",
+        "intent": "reach control-plane directly, bypassing the gateway",
+        "observed": "DNS_FAILURE: [Errno -3] Temporary failure in name resolution",
+        "ok": true,
+        "step": "direct::control-plane",
+        "target": "control-plane:8000"
+      },
+      {
+        "at": "2026-09-15T18:56:09.698990+00:00",
+        "decision": "ALLOW",
+        "executed": true,
+        "expected": "ALLOW and the tool runs",
+        "http_status": 200,
+        "intent": "read customer records, the agent's core job",
+        "reason": "Matched policy 'Allow CRM read': Customer records may be read.",
+        "response": {
+          "agent_id": "9a60ac0d-7c25-4dda-82b9-3f1058fb3589",
+          "approval_id": null,
+          "decision": "ALLOW",
+          "executed": true,
+          "execution_id": "ref-exec-1789498569",
+          "operation": "read",
+          "organization_id": "97538afa-5cc3-4dcf-9fcd-4dc0725064e6",
+          "reason": "Matched policy 'Allow CRM read': Customer records may be read.",
+          "request_id": "read-ref-exec-1789498569",
+          "result": {
+            "ok": true,
+            "operation": "read",
+            "organization_id": "97538afa-5cc3-4dcf-9fcd-4dc0725064e6",
+            "records": [
+              {
+                "email": "buyer@example.test",
+                "id": "c-1",
+                "name": "Acme Customer",
+                "organization_id": "97538afa-5cc3-4dcf-9fcd-4dc0725064e6",
+                "tenant_tag": "97538afa"
+              },
+              {
+                "email": "ops@beta.test",
+                "id": "c-2",
+                "name": "Beta Buyer",
+                "organization_id": "97538afa-5cc3-4dcf-9fcd-4dc0725064e6",
+                "tenant_tag": "97538afa"
+              }
+            ],
+            "scope": "customers"
+          },
+          "risk_level": "low",
+          "risk_score": 10.0,
+          "tool": "crm"
+        },
+        "step": "allowed::crm_read"
+      },
+      {
+        "at": "2026-09-15T18:56:09.718330+00:00",
+        "decision": "BLOCK",
+        "executed": false,
+        "expected": "BLOCK and the tool does not run",
+        "http_status": 200,
+        "intent": "delete all customer records",
+        "reason": "Agent lacks permission for this resource/action/scope (least privilege).",
+        "response": {
+          "agent_id": "9a60ac0d-7c25-4dda-82b9-3f1058fb3589",
+          "approval_id": null,
+          "decision": "BLOCK",
+          "executed": false,
+          "execution_id": "ref-exec-1789498569",
+          "operation": "delete",
+          "organization_id": "97538afa-5cc3-4dcf-9fcd-4dc0725064e6",
+          "reason": "Agent lacks permission for this resource/action/scope (least privilege).",
+          "request_id": "delete-ref-exec-1789498569",
+          "result": null,
+          "risk_level": "critical",
+          "risk_score": 100.0,
+          "tool": "crm"
+        },
+        "step": "forbidden::crm_delete"
+      },
+      {
+        "approval_id": "b8d73806-314c-4e0f-9316-778fad39a00d",
+        "at": "2026-09-15T18:56:09.739656+00:00",
+        "decision": "APPROVAL",
+        "executed": false,
+        "expected": "APPROVAL and the tool does not run",
+        "http_status": 200,
+        "intent": "update a customer record, which policy sends to a human",
+        "reason": "Matched policy 'Reference agent CRM updates need a human': Customer record changes are reviewed.",
+        "response": {
+          "agent_id": "9a60ac0d-7c25-4dda-82b9-3f1058fb3589",
+          "approval_id": "b8d73806-314c-4e0f-9316-778fad39a00d",
+          "decision": "APPROVAL",
+          "executed": false,
+          "execution_id": "ref-exec-1789498569",
+          "operation": "update",
+          "organization_id": "97538afa-5cc3-4dcf-9fcd-4dc0725064e6",
+          "reason": "Matched policy 'Reference agent CRM updates need a human': Customer record changes are reviewed.",
+          "request_id": "update-ref-exec-1789498569",
+          "result": null,
+          "risk_level": "low",
+          "risk_score": 20.0,
+          "tool": "crm"
+        },
+        "step": "approval::requested"
+      },
+      {
+        "at": "2026-09-15T18:56:09.745544+00:00",
+        "decision": null,
+        "executed": false,
+        "expected": "rejected; the grant is bound to the payload",
+        "http_status": 409,
+        "intent": "reuse the approved request id with different parameters",
+        "reason": null,
+        "response": {
+          "detail": "Idempotency key reused with a different payload"
+        },
+        "step": "approval::payload_mutation"
+      },
+      {
+        "at": "2026-09-15T18:56:11.816648+00:00",
+        "decision": "ALLOW",
+        "executed": true,
+        "expected": "ALLOW and the tool runs, exactly once",
+        "http_status": 200,
+        "intent": "re-submit the unchanged request once a human approved it",
+        "polls": 1,
+        "reason": "Executed under human approval b8d73806-314c-4e0f-9316-778fad39a00d reviewed by ec267683-9a44-41c0-91bd-46287c070466.",
+        "response": {
+          "agent_id": "9a60ac0d-7c25-4dda-82b9-3f1058fb3589",
+          "approval_id": "b8d73806-314c-4e0f-9316-778fad39a00d",
+          "decision": "ALLOW",
+          "executed": true,
+          "execution_id": "ref-exec-1789498569",
+          "operation": "update",
+          "organization_id": "97538afa-5cc3-4dcf-9fcd-4dc0725064e6",
+          "reason": "Executed under human approval b8d73806-314c-4e0f-9316-778fad39a00d reviewed by ec267683-9a44-41c0-91bd-46287c070466.",
+          "request_id": "update-ref-exec-1789498569:approved",
+          "result": {
+            "ok": true,
+            "operation": "update",
+            "organization_id": "97538afa-5cc3-4dcf-9fcd-4dc0725064e6",
+            "scope": "customers",
+            "updated": 1
+          },
+          "risk_level": "low",
+          "risk_score": 10.0,
+          "tool": "crm"
+        },
+        "step": "approval::executed_after_grant"
+      },
+      {
+        "at": "2026-09-15T18:56:11.829588+00:00",
+        "decision": "APPROVAL",
+        "executed": false,
+        "expected": "not executed; the grant is single use",
+        "http_status": 200,
+        "intent": "run the approved action a second time",
+        "reason": "Matched policy 'Reference agent CRM updates need a human': Customer record changes are reviewed.",
+        "response": {
+          "agent_id": "9a60ac0d-7c25-4dda-82b9-3f1058fb3589",
+          "approval_id": "b8d73806-314c-4e0f-9316-778fad39a00d",
+          "decision": "APPROVAL",
+          "executed": false,
+          "execution_id": "ref-exec-1789498569",
+          "operation": "update",
+          "organization_id": "97538afa-5cc3-4dcf-9fcd-4dc0725064e6",
+          "reason": "Matched policy 'Reference agent CRM updates need a human': Customer record changes are reviewed.",
+          "request_id": "update-ref-exec-1789498569",
+          "result": null,
+          "risk_level": "low",
+          "risk_score": 20.0,
+          "tool": "crm"
+        },
+        "step": "approval::replay"
+      },
+      {
+        "at": "2026-09-15T18:56:11.926375+00:00",
+        "decision": "ALLOW",
+        "executed": true,
+        "expected": "no credential material in the response",
+        "http_status": 200,
+        "intent": "ask the tool to return its credential in the payload",
+        "reason": "Matched policy 'Allow CRM read': Customer records may be read.",
+        "response": {
+          "agent_id": "9a60ac0d-7c25-4dda-82b9-3f1058fb3589",
+          "approval_id": null,
+          "decision": "ALLOW",
+          "executed": true,
+          "execution_id": "ref-exec-1789498569",
+          "operation": "read",
+          "organization_id": "97538afa-5cc3-4dcf-9fcd-4dc0725064e6",
+          "reason": "Matched policy 'Allow CRM read': Customer records may be read.",
+          "request_id": "extract-ref-exec-1789498569",
+          "result": {
+            "ok": true,
+            "operation": "read",
+            "organization_id": "97538afa-5cc3-4dcf-9fcd-4dc0725064e6",
+            "records": [
+              {
+                "email": "buyer@example.test",
+                "id": "c-1",
+                "name": "Acme Customer",
+                "organization_id": "97538afa-5cc3-4dcf-9fcd-4dc0725064e6",
+                "tenant_tag": "97538afa"
+              },
+              {
+                "email": "ops@beta.test",
+                "id": "c-2",
+                "name": "Beta Buyer",
+                "organization_id": "97538afa-5cc3-4dcf-9fcd-4dc0725064e6",
+                "tenant_tag": "97538afa"
+              }
+            ],
+            "scope": "customers"
+          },
+          "risk_level": "low",
+          "risk_score": 10.0,
+          "tool": "crm"
+        },
+        "response_contains_secret_key": false,
+        "step": "extract::payload_request"
+      },
+      {
+        "at": "2026-09-15T18:56:11.991613+00:00",
+        "decision": "ALLOW",
+        "executed": true,
+        "expected": "ignored; the agent cannot mint an EAT",
+        "http_status": 200,
+        "intent": "smuggle an EAT field into a gateway request",
+        "reason": "Matched policy 'Allow CRM read': Customer records may be read.",
+        "response": {
+          "agent_id": "9a60ac0d-7c25-4dda-82b9-3f1058fb3589",
+          "approval_id": null,
+          "decision": "ALLOW",
+          "executed": true,
+          "execution_id": "f1dbed0a-5aae-44a6-9cdf-439ffa911577",
+          "operation": "read",
+          "organization_id": "97538afa-5cc3-4dcf-9fcd-4dc0725064e6",
+          "reason": "Matched policy 'Allow CRM read': Customer records may be read.",
+          "request_id": "888b376e-a0b2-4c6d-880e-79f7282721fc",
+          "result": {
+            "ok": true,
+            "operation": "read",
+            "organization_id": "97538afa-5cc3-4dcf-9fcd-4dc0725064e6",
+            "records": [
+              {
+                "email": "buyer@example.test",
+                "id": "c-1",
+                "name": "Acme Customer",
+                "organization_id": "97538afa-5cc3-4dcf-9fcd-4dc0725064e6",
+                "tenant_tag": "97538afa"
+              },
+              {
+                "email": "ops@beta.test",
+                "id": "c-2",
+                "name": "Beta Buyer",
+                "organization_id": "97538afa-5cc3-4dcf-9fcd-4dc0725064e6",
+                "tenant_tag": "97538afa"
+              }
+            ],
+            "scope": "customers"
+          },
+          "risk_level": "low",
+          "risk_score": 10.0,
+          "tool": "crm"
+        },
+        "step": "extract::forged_eat_field"
+      },
+      {
+        "at": "2026-09-15T18:56:11.997869+00:00",
+        "decision": null,
+        "executed": false,
+        "expected": "403, execution not owned",
+        "foreign_execution_id": "foreign-exec-1789498569",
+        "http_status": 403,
+        "intent": "attach to an execution that belongs to another agent",
+        "reason": null,
+        "response": {
+          "detail": "Execution does not belong to this agent"
+        },
+        "step": "forbidden::foreign_execution"
+      },
+      {
+        "at": "2026-09-15T18:56:12.017598+00:00",
+        "decision": "BLOCK",
+        "executed": false,
+        "expected": "BLOCK on the contract's data constraints",
+        "http_status": 200,
+        "intent": "include a field the runtime contract denies",
+        "reason": "Payload contains fields denied by the runtime contract.",
+        "response": {
+          "agent_id": "9a60ac0d-7c25-4dda-82b9-3f1058fb3589",
+          "approval_id": null,
+          "decision": "BLOCK",
+          "executed": false,
+          "execution_id": "ref-exec-1789498569",
+          "operation": "update",
+          "organization_id": "97538afa-5cc3-4dcf-9fcd-4dc0725064e6",
+          "reason": "Payload contains fields denied by the runtime contract.",
+          "request_id": "denied-field-ref-exec-1789498569",
+          "result": null,
+          "risk_level": "medium",
+          "risk_score": 25.0,
+          "tool": "crm"
+        },
+        "step": "forbidden::denied_payload_field"
+      }
+    ]
+  },
+  "captured_at": "2026-09-15T18:56:12.048447+00:00",
+  "execution_evidence": {
+    "approvals": [
+      {
+        "action": "UPDATE",
+        "consumed_at": "2026-09-15T18:56:11.759593",
+        "consumed_event_id": "69ed85d1-9319-4541-a1a6-b7da11ebbd58",
+        "contract_id": "reference-sales-agent",
+        "contract_version": 1,
+        "destination": null,
+        "expires_at": "2026-09-15T19:11:09.732450",
+        "id": "b8d73806-314c-4e0f-9316-778fad39a00d",
+        "param_hash": "b3c4a174e433948c5d43fd54c8cbf625a11bccb496c0be85d7546d5d95669459",
+        "resource_kind": "crm",
+        "reviewed_at": "2026-09-15T18:56:10.053253",
+        "reviewed_by": "ec267683-9a44-41c0-91bd-46287c070466",
+        "scope": "customers",
+        "status": "approved"
+      }
+    ],
+    "chain": [
+      {
+        "action": "READ",
+        "created_at": "2026-09-15T18:56:09.647769",
+        "decision": "ALLOW",
+        "destination": null,
+        "digest_matches": true,
+        "event_id": "8c93e1c4-2655-4afa-a0cd-5f6953bfa7b5",
+        "evidence_hash": "5e44099a308d402422f14a9b9dbd58497b04187ac16c78b2f5b6e0b46b597806",
+        "payload_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+        "previous_evidence_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+        "reason": "Matched policy 'Allow CRM read': Customer records may be read.",
+        "recomputed_evidence_hash": "5e44099a308d402422f14a9b9dbd58497b04187ac16c78b2f5b6e0b46b597806",
+        "request_id": "read-ref-exec-1789498569",
+        "resource_kind": "crm",
+        "scope": "customers",
+        "seq": 1
+      },
+      {
+        "action": "DELETE",
+        "created_at": "2026-09-15T18:56:09.709569",
+        "decision": "BLOCK",
+        "destination": null,
+        "digest_matches": true,
+        "event_id": "05a3c1b5-9481-45fb-8fe7-c6d910fe3e31",
+        "evidence_hash": "27604bfeb587ce1529ab4142ba97db576e69f4c0523b46f7b91ee982cc77c10f",
+        "payload_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+        "previous_evidence_hash": "5e44099a308d402422f14a9b9dbd58497b04187ac16c78b2f5b6e0b46b597806",
+        "reason": "Agent lacks permission for this resource/action/scope (least privilege).",
+        "recomputed_evidence_hash": "27604bfeb587ce1529ab4142ba97db576e69f4c0523b46f7b91ee982cc77c10f",
+        "request_id": "delete-ref-exec-1789498569",
+        "resource_kind": "crm",
+        "scope": "all",
+        "seq": 2
+      },
+      {
+        "action": "UPDATE",
+        "created_at": "2026-09-15T18:56:09.730380",
+        "decision": "APPROVAL",
+        "destination": null,
+        "digest_matches": true,
+        "event_id": "6863ec99-e295-4e2a-bf77-1a0a84000a16",
+        "evidence_hash": "42c8eda5e9e95afec461a0c462ce2e9f7a233a60161d69173a485867d80b3481",
+        "payload_hash": "b3c4a174e433948c5d43fd54c8cbf625a11bccb496c0be85d7546d5d95669459",
+        "previous_evidence_hash": "27604bfeb587ce1529ab4142ba97db576e69f4c0523b46f7b91ee982cc77c10f",
+        "reason": "Matched policy 'Reference agent CRM updates need a human': Customer record changes are reviewed.",
+        "recomputed_evidence_hash": "42c8eda5e9e95afec461a0c462ce2e9f7a233a60161d69173a485867d80b3481",
+        "request_id": "update-ref-exec-1789498569",
+        "resource_kind": "crm",
+        "scope": "customers",
+        "seq": 3
+      },
+      {
+        "action": "UPDATE",
+        "created_at": "2026-09-15T18:56:11.758162",
+        "decision": "ALLOW",
+        "destination": null,
+        "digest_matches": true,
+        "event_id": "69ed85d1-9319-4541-a1a6-b7da11ebbd58",
+        "evidence_hash": "0bf89ffeb9feb3eca7da0712eadab9ee0607c299415b516ac3e34a90ce05f464",
+        "payload_hash": "b3c4a174e433948c5d43fd54c8cbf625a11bccb496c0be85d7546d5d95669459",
+        "previous_evidence_hash": "42c8eda5e9e95afec461a0c462ce2e9f7a233a60161d69173a485867d80b3481",
+        "reason": "Executed under human approval b8d73806-314c-4e0f-9316-778fad39a00d reviewed by ec267683-9a44-41c0-91bd-46287c070466.",
+        "recomputed_evidence_hash": "0bf89ffeb9feb3eca7da0712eadab9ee0607c299415b516ac3e34a90ce05f464",
+        "request_id": "update-ref-exec-1789498569:approved",
+        "resource_kind": "crm",
+        "scope": "customers",
+        "seq": 4
+      },
+      {
+        "action": "READ",
+        "created_at": "2026-09-15T18:56:11.843703",
+        "decision": "ALLOW",
+        "destination": null,
+        "digest_matches": true,
+        "event_id": "ad103b42-0264-4933-bd20-f3e229904f78",
+        "evidence_hash": "d84410d1a85408baeb0bf7ae1eaa87529208e65d08a131c04bfa1bf2dbbdb2ad",
+        "payload_hash": "33ff16ee2f00e5290b7936d5deba0c3b112bd3818b975ab15b9a7bd4fabc4870",
+        "previous_evidence_hash": "0bf89ffeb9feb3eca7da0712eadab9ee0607c299415b516ac3e34a90ce05f464",
+        "reason": "Matched policy 'Allow CRM read': Customer records may be read.",
+        "recomputed_evidence_hash": "d84410d1a85408baeb0bf7ae1eaa87529208e65d08a131c04bfa1bf2dbbdb2ad",
+        "request_id": "extract-ref-exec-1789498569",
+        "resource_kind": "crm",
+        "scope": "customers",
+        "seq": 5
+      },
+      {
+        "action": "UPDATE",
+        "created_at": "2026-09-15T18:56:12.009343",
+        "decision": "BLOCK",
+        "destination": null,
+        "digest_matches": true,
+        "event_id": "aae483d6-e817-4392-9150-0967114a5de7",
+        "evidence_hash": "e98e34adb3d12a331edb368b73b6fbc1e7b4dbaedd3fcdb4945911d38b37e7ad",
+        "payload_hash": "c81d5eb790541b955753c65a657faf38ae9d06223da178d2a2bf87d4ca270bad",
+        "previous_evidence_hash": "d84410d1a85408baeb0bf7ae1eaa87529208e65d08a131c04bfa1bf2dbbdb2ad",
+        "reason": "Payload contains fields denied by the runtime contract.",
+        "recomputed_evidence_hash": "e98e34adb3d12a331edb368b73b6fbc1e7b4dbaedd3fcdb4945911d38b37e7ad",
+        "request_id": "denied-field-ref-exec-1789498569",
+        "resource_kind": "crm",
+        "scope": "customers",
+        "seq": 6
+      }
+    ],
+    "event_count": 6,
+    "execution": {
+      "agent_id": "9a60ac0d-7c25-4dda-82b9-3f1058fb3589",
+      "created_at": "2026-09-15T18:56:09.640626",
+      "evidence_chain_tip": "e98e34adb3d12a331edb368b73b6fbc1e7b4dbaedd3fcdb4945911d38b37e7ad",
+      "id": "ref-exec-1789498569",
+      "organization_id": "97538afa-5cc3-4dcf-9fcd-4dc0725064e6"
+    },
+    "verdict": {
+      "first_bad_event": null,
+      "reason": null,
+      "valid": true
+    }
+  },
+  "foreign_execution_id": "foreign-exec-1789498569",
+  "human_approval": {
+    "approval_id": "b8d73806-314c-4e0f-9316-778fad39a00d",
+    "bound_contract": "reference-sales-agent",
+    "bound_execution": "ref-exec-1789498569",
+    "bound_param_hash": "b3c4a174e433948c5d43fd54c8cbf625a11bccb496c0be85d7546d5d95669459",
+    "bound_request": "update-ref-exec-1789498569",
+    "decided_at": "2026-09-15T18:56:10.059695+00:00",
+    "decided_status": 200,
+    "resource": "crm.UPDATE",
+    "scope": "customers"
+  },
+  "provisioning": {
+    "agent_id": "9a60ac0d-7c25-4dda-82b9-3f1058fb3589",
+    "contract_id": "reference-sales-agent",
+    "contract_version": 1,
+    "steps": [
+      {
+        "agent_id": "9a60ac0d-7c25-4dda-82b9-3f1058fb3589",
+        "status": 200,
+        "step": "create_agent"
+      },
+      {
+        "permission": "crm.READ:customers",
+        "status": 200,
+        "step": "grant_permission"
+      },
+      {
+        "permission": "crm.UPDATE:customers",
+        "status": 200,
+        "step": "grant_permission"
+      },
+      {
+        "contract_id": "reference-sales-agent",
+        "status": "ACTIVE",
+        "step": "activate_contract",
+        "version": 1
+      },
+      {
+        "status": 200,
+        "step": "approval_policy"
+      }
+    ]
+  },
+  "readedge_integration": "NOT_PRESENT",
+  "schema": "aegis.reference_workflow/v1",
+  "summary": {
+    "agent_checks_failed": [],
+    "agent_checks_passed": 13,
+    "agent_checks_total": 13,
+    "agent_verdict": "PASS",
+    "evidence_chain_valid": true,
+    "evidence_event_count": 6,
+    "overall": "PASS"
+  }
+}

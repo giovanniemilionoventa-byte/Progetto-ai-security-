@@ -7,6 +7,7 @@ from app import models, schemas
 from app.contract_store import save_contract
 from app.database import Base
 from app.eat import EatError, param_hash, sign_claims, sign_eat, verify_eat
+from app import config as enforcement_config
 from app.engines.enforcement import authorize_request
 from app.engines.behavior import TrajectoryStep
 from app.engines.contract import evaluate_contract
@@ -148,7 +149,24 @@ def _authorize(db, agent, **body):
     return authorize_request(db, agent, schemas.AuthorizeRequest(**request))
 
 
-def test_no_contract_keeps_phase10_allow():
+def test_no_contract_is_fail_closed():
+    """Phase 17 replaces the Phase 10 pass-through.
+
+    This test previously asserted that an agent with no runtime contract still
+    reached ALLOW ("keeps phase10 allow"). That allowance meant the Runtime
+    Contract was inert in every deployment, because nothing ever created one.
+    An agent with no contract now has no authority.
+    """
+    db = _db()
+    outcome = _authorize(db, _agent(db))
+    assert outcome.event.decision == "BLOCK"
+    assert outcome.contract_id is None
+    assert "no runtime contract" in outcome.event.reason.lower()
+
+
+def test_legacy_passthrough_is_opt_in_and_documented(monkeypatch):
+    """The compatibility escape hatch still exists, but must be chosen."""
+    monkeypatch.setattr(enforcement_config, "REQUIRE_RUNTIME_CONTRACT", False)
     db = _db()
     outcome = _authorize(db, _agent(db))
     assert outcome.event.decision == "ALLOW"
@@ -200,13 +218,18 @@ def test_agent_mismatch_does_not_use_foreign_contract():
     )
     db.commit()
     agent = _agent(db, "agent-2")
-    allowed = _authorize(db, agent)
-    assert allowed.event.decision == "ALLOW"
-    assert allowed.contract_id is None
+    # agent-2 has its own permissions but no contract of its own. It must not
+    # borrow agent-1's, and under Phase 17 it has no authority at all.
+    without_claim = _authorize(db, agent)
+    assert without_claim.event.decision == "BLOCK"
+    assert without_claim.contract_id is None
+    assert "no runtime contract" in without_claim.event.reason.lower()
+
     blocked = _authorize(
         db, agent, metadata={"contract_id": "sales-contract"}
     )
     assert blocked.event.decision == "BLOCK"
+    assert blocked.contract_id is None
 
 
 def test_organization_mismatch_does_not_use_foreign_contract():
@@ -497,6 +520,20 @@ def test_block_and_approval_do_not_issue_eat_binding():
     assert blocked.event.decision == "BLOCK"
     assert blocked.event.decision != "ALLOW"
     db2 = _db()
+    # The contract must permit external email, otherwise the contract layer
+    # blocks first and we would never observe the APPROVAL path we are testing.
+    save_contract(
+        db2,
+        _contract(
+            resources=[
+                {"kind": "crm", "scope": "customers"},
+                {"kind": "email", "scope": "*"},
+            ],
+            constraints={},
+            workflow=None,
+            data_constraints={},
+        ),
+    )
     db2.add(
         models.Policy(
             organization_id="org-1",
@@ -519,7 +556,7 @@ def test_block_and_approval_do_not_issue_eat_binding():
         destination="external",
     )
     assert approved.event.decision == "APPROVAL"
-    assert approved.contract_id is None
+    assert approved.contract_id == "sales-contract"
 
 
 def test_eat_contract_tampering_rejected():

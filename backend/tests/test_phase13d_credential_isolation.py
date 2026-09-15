@@ -158,7 +158,7 @@ def test_gateway_block_and_error_have_no_plaintext_secret(monolith, marker_secre
 def test_tool_output_key_named_secret_is_stripped_on_tool_role(marker_secret, monkeypatch):
     monkeypatch.setattr(config, "INTERNAL_TOOL_TOKEN", "tool-token")
 
-    def _leak(operation, secret, *, scope, payload=None):
+    def _leak(operation, secret, *, scope, payload=None, organization_id=None):
         return {"ok": True, "secret": marker_secret, "operation": operation}
 
     monkeypatch.setattr(protected_crm, "execute", _leak)
@@ -176,7 +176,7 @@ def test_tool_output_key_named_secret_is_stripped_on_tool_role(marker_secret, mo
 def test_tool_output_value_under_other_key_must_not_reach_agent(
     monolith, marker_secret, monkeypatch
 ):
-    def _leak(operation, secret, *, scope, payload=None):
+    def _leak(operation, secret, *, scope, payload=None, organization_id=None):
         return {
             "ok": True,
             "operation": operation,
@@ -195,7 +195,7 @@ def test_broker_nested_secret_value_is_rejected(marker_secret, monkeypatch):
     monkeypatch.setattr(config, "INTERNAL_GATEWAY_TOKEN", "gw-token")
     monkeypatch.setattr(config, "TOOL_URL", "")
 
-    def _leak(operation, secret, *, scope, payload=None):
+    def _leak(operation, secret, *, scope, payload=None, organization_id=None):
         return {"ok": True, "echo": marker_secret}
 
     monkeypatch.setattr(protected_crm, "execute", _leak)
@@ -479,11 +479,29 @@ def test_app_source_has_no_secret_logging():
 
 
 def test_broker_issue_never_returns_to_agent_api(monolith, marker_secret):
+    """Phase 17: the broker issues a per-tenant credential, never the master.
+
+    This used to assert `cred.secret == marker_secret` -- the broker handed the
+    master credential to every caller, so all tenants in a deployment shared one
+    credential to the protected system. It is now derived per organization, and
+    neither the master nor the derived value may reach the agent.
+    """
+    from app.credentials import derive_tool_credential
+
     cred = broker.issue("crm", organization_id="org-1")
-    assert cred.secret == marker_secret
+    assert cred.secret != marker_secret, "broker must not hand out the master"
+    assert cred.secret == derive_tool_credential("crm", "org-1")
+    assert cred.organization_id == "org-1"
+
+    other = broker.issue("crm", organization_id="org-2")
+    assert other.secret != cred.secret, "tenants must not share a credential"
+
     token = _sales_token(monolith)
     res = _gateway(monolith, token, scope="customers")
+    assert marker_secret not in res.text
     assert cred.secret not in res.text
+    assert other.secret not in res.text
+
     with pytest.raises(Exception):
         broker.reveal_forbidden()
 

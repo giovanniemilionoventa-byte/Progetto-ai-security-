@@ -7,9 +7,10 @@ from uuid import uuid4
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from .. import models, schemas
+from .. import config, models, schemas
 from ..contract_store import ContractResolutionError, resolve_active_contract_for_agent
 from ..security import utcnow
+from ..services import approval_grant
 from ..services.evidence_verifier import (
     EvidenceIntegrityError,
     assert_execution_evidence_integrity,
@@ -33,6 +34,10 @@ class AuthorizationOutcome:
     contract_id: Optional[str] = None
     contract_version: Optional[int] = None
     authorized_payload: Optional[dict] = None
+    # Phase 17: set when this outcome is an execution authorized by a human
+    # approval rather than by a direct ALLOW decision.
+    approval_granted: bool = False
+    approval_reason: Optional[str] = None
 
 
 def _maybe_alert(db: Session, event: models.Event) -> None:
@@ -93,6 +98,119 @@ def _idempotent_payload_matches(
     return True
 
 
+def _resume_approved_request(
+    db: Session,
+    agent: models.Agent,
+    original: models.Event,
+    body: schemas.AuthorizeRequest,
+) -> Optional[AuthorizationOutcome]:
+    """Execute a request that a human has approved, exactly once.
+
+    Returns None when there is no usable grant, so the caller falls back to the
+    ordinary replay behaviour (the request stays APPROVAL and nothing runs).
+
+    The approved execution is recorded as a *new* event in the same execution
+    chain rather than by rewriting the APPROVAL event. The audit trail then
+    reads as it actually happened: the agent asked, a human approved, and the
+    action ran under that approval.
+    """
+    payload_hash = _payload_digest(_effective_payload(body))
+
+    contract_id = None
+    contract_version = None
+    try:
+        contract = resolve_active_contract_for_agent(db, agent)
+    except ContractResolutionError:
+        contract = None
+    if contract is not None:
+        contract_id = contract.contract_id
+        contract_version = contract.version
+
+    verdict = approval_grant.evaluate_grant(
+        db,
+        agent=agent,
+        event=original,
+        resource_kind=body.resource_kind.lower(),
+        action=body.action.upper(),
+        scope=body.scope,
+        destination=body.destination,
+        payload_hash=payload_hash,
+        contract_id=contract_id,
+        contract_version=contract_version,
+    )
+    if not verdict.granted:
+        return None
+
+    # A revoked or expired contract must stop an approved action too: the human
+    # approved an action under a contract, not in the abstract.
+    if contract is None and config.REQUIRE_RUNTIME_CONTRACT:
+        return None
+
+    execution = (
+        db.query(models.Execution)
+        .filter(models.Execution.id == original.execution_id)
+        .first()
+    )
+    if execution is None:
+        return None
+
+    try:
+        assert_execution_evidence_integrity(db, execution.id)
+    except EvidenceIntegrityError as exc:
+        org_id = agent.organization_id
+        exec_id = execution.id
+        db.rollback()
+        record_integrity_failure(
+            db, organization_id=org_id, execution_id=exec_id, reason=exc.reason
+        )
+        db.commit()
+        raise
+
+    risk = risk_engine.evaluate(
+        original.resource_kind,
+        original.action,
+        original.scope,
+        original.destination,
+        "ALLOW",
+    )
+    event = models.Event(
+        organization_id=agent.organization_id,
+        agent_id=agent.id,
+        execution_id=execution.id,
+        seq=behavior_engine.next_seq(db, execution.id),
+        resource_kind=original.resource_kind,
+        action=original.action,
+        scope=original.scope,
+        destination=original.destination,
+        payload_hash=payload_hash,
+        decision="ALLOW",
+        risk_score=risk.score,
+        risk_level=risk.level,
+        reason=(
+            f"Executed under human approval {verdict.approval.id} "
+            f"reviewed by {verdict.approval.reviewed_by or 'operator'}."
+        ),
+        request_id=f"{original.request_id}:approved",
+        created_at=utcnow(),
+    )
+    db.add(event)
+    db.flush()
+    seal_execution_event(db, event, execution)
+    approval_grant.consume(db, verdict.approval, event.id)
+    db.commit()
+
+    return AuthorizationOutcome(
+        event=event,
+        approval_id=verdict.approval.id,
+        replayed=False,
+        contract_id=contract_id,
+        contract_version=contract_version,
+        authorized_payload=_effective_payload(body),
+        approval_granted=True,
+        approval_reason=verdict.reason,
+    )
+
+
 def authorize_request(
     db: Session,
     agent: models.Agent,
@@ -119,6 +237,13 @@ def authorize_request(
             .filter(models.Approval.event_id == existing.id)
             .first()
         )
+        if existing.decision == "APPROVAL":
+            # Phase 17: re-submitting an approved request is how it executes.
+            # The grant is checked against the request as it stands right now,
+            # so nothing about it can have moved since the human said yes.
+            granted = _resume_approved_request(db, agent, existing, body)
+            if granted is not None:
+                return granted
         return AuthorizationOutcome(
             event=existing,
             approval_id=approval.id if approval else None,
@@ -212,6 +337,13 @@ def authorize_request(
                 reason = (
                     "Declared contract_id does not match the resolved runtime contract."
                 )
+            elif config.REQUIRE_RUNTIME_CONTRACT:
+                # Phase 17: no contract is not a reason to proceed. Before this,
+                # an agent with no contract at all fell through to permission +
+                # policy alone, and the policy engine allows anything it has no
+                # rule for -- a double default-permit.
+                decision = "BLOCK"
+                reason = "No runtime contract is active for this agent."
         else:
             decision = "BLOCK"
             reason = {
@@ -283,6 +415,8 @@ def authorize_request(
 
     approval_id = None
     if decision == "APPROVAL":
+        # Phase 17: record everything the grant will later be checked against,
+        # so approving this request cannot become authority for a different one.
         approval = models.Approval(
             organization_id=agent.organization_id,
             agent_id=agent.id,
@@ -293,6 +427,12 @@ def authorize_request(
             destination=event.destination,
             status="pending",
             reason=reason,
+            execution_id=event.execution_id,
+            request_id=event.request_id,
+            contract_id=contract.contract_id if contract else None,
+            contract_version=contract.version if contract else None,
+            param_hash=event.payload_hash,
+            expires_at=approval_grant.default_expiry(),
         )
         db.add(approval)
         db.flush()

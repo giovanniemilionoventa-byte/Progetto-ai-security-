@@ -44,10 +44,16 @@ def _harness_execute(
     cred = broker.issue(tool, organization_id=organization_id)
     if tool != "crm":
         raise HTTPException(status_code=400, detail=f"Unsupported tool '{tool}'")
-    result = protected_crm.execute(operation, cred.secret, scope=scope, payload=payload)
-    from ..credentials import contains_tool_secret
+    result = protected_crm.execute(
+        operation,
+        cred.secret,
+        scope=scope,
+        payload=payload,
+        organization_id=organization_id,
+    )
+    from ..credentials import contains_any_tool_secret
 
-    if contains_tool_secret(result):
+    if contains_any_tool_secret(result, organization_id):
         raise HTTPException(status_code=502, detail="Protected tool returned unsafe payload")
     return result
 

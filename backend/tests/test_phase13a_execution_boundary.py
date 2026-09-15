@@ -648,14 +648,36 @@ def test_live_runtime_probe_records_environment_limitation():
         )
 
 
-def test_l3_runtime_isolation_not_verified_without_docker():
-    if _docker_daemon_present():
-        pytest.fail(
-            "Docker daemon present but Phase 13.A live namespace probe "
-            "was not implemented in this environment path; do not claim NETWORK_BLOCK"
+def test_l3_runtime_isolation_verified_when_stack_is_live():
+    """Phase 13.A's tripwire, discharged by Phase 17.
+
+    This test used to fail deliberately whenever a Docker daemon existed but no
+    live namespace probe had been run, so that NETWORK_BLOCK could never be
+    claimed from a unit test. Phase 17 supplies that probe
+    (infra/boundary/boundary_proof.py), so the guard now asserts the real thing:
+    with a live stack, the agent's blocked paths must be blocked by the network,
+    not by application code. Without a daemon it still skips.
+    """
+    from .runtime_boundary import check_for, require_live_stack
+
+    evidence = require_live_stack()
+    assert evidence["status"] == "VERIFIED", evidence.get("summary")
+
+    for destination in (
+        "aegis-credential-broker",
+        "aegis-protected-tool",
+        "aegis-control-plane",
+    ):
+        check = check_for(evidence, "aegis-agent", destination)
+        assert check["observed"] == "DENY"
+        assert check["classification"] == "NETWORK_BLOCK", (
+            f"agent -> {destination} was blocked at "
+            f"{check['boundary_level']} level, not NETWORK"
         )
-    assert not Path("/var/run/docker.sock").exists()
-    pytest.skip("Execution Boundary: NOT VERIFIED at L3/runtime level.")
+        assert check["boundary_level"] == "NETWORK"
+
+    allowed = check_for(evidence, "aegis-agent", "aegis-enforcement-gateway")
+    assert allowed["observed"] == "ALLOW"
 
 
 def test_attack_matrix_json_is_stable():

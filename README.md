@@ -14,9 +14,18 @@ Aegis runtime  →  ALLOW | APPROVAL | BLOCK
 Execution evidence (audit)
 ```
 
-## What this MVP proves
+## What this proves
 
-An agent attempts an action. Aegis identifies it, evaluates least-privilege scopes and deterministic policies, scores risk, and returns a reliable decision. Irreversible or external actions require a human.
+An agent attempts an action. Aegis identifies it, resolves the agent's runtime
+contract, evaluates least-privilege scopes and deterministic policies, scores
+risk, and returns a decision. Irreversible or external actions require a human,
+and that human's decision authorizes exactly one execution.
+
+As of Phase 17 this is demonstrated at runtime rather than asserted: the agent
+cannot reach the protected systems at the network level, cannot act outside its
+contract, cannot act without a human where one is required, cannot reuse that
+decision, cannot obtain a credential, and cannot alter the record of what it did
+without detection.
 
 ## Stack
 
@@ -93,47 +102,95 @@ Demo agent (runs the seven blueprint tools):
 python3 demo-agent/agent.py
 ```
 
-## Isolated trust domains (Phase 10)
+## Running the stack
 
 ```bash
+scripts/init-env.sh          # generate real secrets; required, there is no fallback
 docker compose up --build
 ```
 
-Trust domains: `control-plane`, `enforcement-gateway`, `credential-broker`, `protected-tool`, unprivileged `agent`.
+Trust domains: `control-plane`, `enforcement-gateway`, `credential-broker`,
+`protected-tool`, unprivileged `agent`.
 
-Flow: Agent → Gateway (`authorize_request`, EAT sign) → Broker (EAT verify, unwrap) → Tool.
+Flow: Agent → Gateway (authorize, EAT sign) → Broker (EAT verify, derive
+credential) → Tool.
 
-| Flow | Compose attachment |
+Only the control plane is published to the host (port 8000). The gateway is
+attached solely to internal networks, so it is unreachable from the host by
+design — to act as an agent, go through the agent container.
+
+## Execution boundary — runtime-proven (Phase 17)
+
+Until Phase 17 the topology was declared in `docker-compose.yml` but had never
+been observed, and five tests skipped for want of a Docker daemon. It is now
+measured from inside the running containers:
+
+| Path | Expected | Observed |
+| --- | --- | --- |
+| Agent → Gateway | ALLOW | ALLOW |
+| Agent → Broker | DENY | `NETWORK_BLOCK` (ENETUNREACH) |
+| Agent → Protected Tool | DENY | `NETWORK_BLOCK` (ENETUNREACH) |
+| Agent → Control Plane | DENY | `NETWORK_BLOCK` (ENETUNREACH) |
+| Agent / Broker / Tool → DB | DENY | `FILESYSTEM_BLOCK` (volume not mounted) |
+| Gateway → Broker | ALLOW | ALLOW |
+| Gateway → Protected Tool | DENY | `NETWORK_BLOCK` |
+| Broker → Protected Tool | ALLOW | ALLOW |
+
+13/13, no deny path resting on application code. An application `403` is still
+not treated as a boundary, and `ECONNREFUSED` is reported as `PORT_CLOSED`, not
+isolation.
+
+```bash
+python3 infra/boundary/boundary_proof.py --out docs/evidence/phase17_execution_boundary.json
+```
+
+Evidence: `docs/evidence/phase17_execution_boundary.json`.
+Detail: `docs/PHASE_17_RUNTIME_PROOF.md`.
+
+## Reference agent — end-to-end
+
+```bash
+python3 infra/reference-agent/run_reference_workflow.py
+```
+
+A deterministic agent runs inside the agent container holding nothing but an
+Aegis token, and exercises the real path: a permitted action executes, a
+forbidden one is blocked, an action needing a human waits for one and then runs
+exactly once, a mutated version of it is refused, and the resulting evidence
+chain verifies. 13/13 checks.
+
+**This is a reference agent, not a framework integration.** ReadEdge is not
+present in this repository and no integration with it is claimed.
+
+## Security posture
+
+- **Runtime Contract is mandatory.** An agent with no ACTIVE contract has no
+  authority. Manage contracts at `/api/agents/{id}/contracts`; an agent token
+  cannot read or write the contract that governs it.
+- **Approval gates execution.** An approved request runs once, bound to its
+  organization, agent, execution, request, action, scope, destination, payload
+  digest and contract version, and expires.
+- **Credentials are derived per tenant** and never reach the agent. The provider
+  still holds the master key, so this is separation, not customer-held keys.
+- **Evidence is a HMAC chain** with an auditor endpoint at
+  `/api/executions/{id}/evidence`. The key must be configured; the app refuses
+  to start on the shipped default.
+
+Known limitations are listed in `docs/PHASE_17_RUNTIME_PROOF.md` §10 rather than
+omitted — including the one the handoff document cares most about: CAN USE ≠ CAN
+READ is still not implemented.
+
+## Phase history
+
+| Phase | Outcome |
 | --- | --- |
-| Agent → Gateway | ALLOW (`agent_net`, internal) |
-| Agent → Broker / Tool / CP / DB | DENY |
-| Gateway → Broker | ALLOW (`broker_net`, internal) |
-| Gateway → Tool | DENY (gateway not on `tool_net`) |
-| Broker → Tool | ALLOW (`tool_net`, internal) |
-
-IMPLEMENTED: process split, EAT HMAC-SHA256 with `AEGIS_EAT_KEY`, CAN USE ≠ CAN READ on the Compose path, Agent unprivileged, Agent→DB DENY (no volume).
-
-NOT IMPLEMENTED: CP/Gateway SQL privilege isolation (shared SQLite volume), mTLS.
-
-NOT VERIFIED: L3 runtime reachability unless Docker daemon is present. Compose YAML is a contract, not a live probe.
-
-## Execution boundary (Phase 13.A)
-
-Attack matrix: `docs/PHASE_13A_EXECUTION_BOUNDARY.md`. Tests: `backend/tests/test_phase13a_execution_boundary.py`.
-
-A Gateway 403/401 is APPLICATION_BLOCK, not proof of network isolation.
-
-Execution Boundary: NOT VERIFIED at L3/runtime level in the environment that produced this checkpoint (no Docker daemon, no Agent namespace).
-
-Phase 13.B live Docker attempt: `docs/PHASE_13B_LIVE_DOCKER_BOUNDARY.md`. Docker CLI/daemon still absent; Agent-namespace probe was not executed. L3/RUNTIME VERIFICATION = NOT VERIFIED.
-
-Phase 13.C remediation: `docs/PHASE_13C_EXECUTION_BOUNDARY_REMEDIATION.md`. `agent_net` is `internal: true`. Host ports, shared SQLite, and probe hostnames assessed (ACCEPT/DEFER). L3/RUNTIME remains NOT VERIFIED.
-
-Phase 13.D credential isolation: `docs/PHASE_13D_CREDENTIAL_ISOLATION.md`. Nested tool output echoing CRM_SECRET is rejected (502). Application-level isolation tested; runtime secret isolation NOT VERIFIED.
-
-Phase 13.E runtime residual validation: `docs/PHASE_13E_RUNTIME_BOUNDARY_VALIDATION.md`. Docker still absent. RUNTIME VERIFICATION: NOT VERIFIED. Verdict: NOT VERIFIED.
-
-FUTURE: PostgreSQL roles, mTLS, secret store other than env.
+| 1–8 | Least privilege, policy, execution, trajectory, behavior patterns, gateway |
+| 10 | Process split, EAT, Compose trust domains |
+| 11–12 | Runtime Contract schema, storage, enforcement; server-side trajectory |
+| 13.A–13.F | Execution boundary analysis, credential isolation, fail-closed |
+| 14–15 | Tamper-evidence gap documented, then HMAC-SHA256 chain |
+| 16.A–16.C | Performance baseline, load/concurrency, cloud multi-tenant |
+| 17 | Runtime proof, contract activation, approval loop, reference agent |
 
 ## Principles
 
@@ -142,11 +199,17 @@ Model-agnostic. Least privilege. Zero trust. Privacy by design (metadata only, n
 ## Layout
 
 ```
-backend/          FastAPI control plane + engines
-frontend/         React dashboard
-sdk/python/       AegisClient
-sdk/typescript/   fetch-based client
-demo-agent/       tool-calling sample
-infra/agent/      unprivileged agent image + network probe
+backend/              FastAPI control plane + engines
+frontend/             React dashboard
+sdk/python/           AegisClient
+sdk/typescript/       fetch-based client
+demo-agent/           tool-calling sample
+infra/agent/          unprivileged agent image + boundary probe
+infra/reference-agent/ deterministic agent + end-to-end driver
+infra/boundary/       execution-boundary proof harness
+benchmarks/           16.A/B/C performance tooling and results
+docs/                 phase reports
+docs/evidence/        committed runtime evidence artifacts
+scripts/init-env.sh   generate deployment secrets
 docker-compose.yml
 ```

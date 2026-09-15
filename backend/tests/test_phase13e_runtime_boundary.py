@@ -32,13 +32,34 @@ def test_yaml_agent_net_internal_is_configuration_not_runtime():
     assert NETWORKS["agent_net"]["internal"] is True
 
 
-def test_runtime_agent_namespace_not_verified_without_docker():
-    if _docker_present():
-        pytest.fail(
-            "Docker present but Phase 13.E did not run live Agent-namespace "
-            "probes in this path; do not mark L3 VERIFIED from pytest"
-        )
-    pytest.skip(
-        "RUNTIME VERIFICATION: NOT VERIFIED — Docker daemon absent; "
-        "Agent container not running"
-    )
+def test_runtime_agent_namespace_verified_when_stack_is_live():
+    """Phase 13.E's residual finding, discharged by Phase 17.
+
+    13.E could only read YAML and record that the Agent namespace had never been
+    observed. With a live stack we now observe it directly: the agent container
+    holds exactly one network attachment and its route table has no path to the
+    protected services.
+    """
+    from .runtime_boundary import require_live_stack
+
+    evidence = require_live_stack()
+    probe = evidence.get("agent_probe") or {}
+    vantage = probe.get("vantage") or {}
+
+    # The agent is unprivileged and confined to a single network.
+    assert vantage.get("uid") == 10001
+    assert vantage.get("proc_status", {}).get("CapEff") == "0000000000000000"
+    assert vantage.get("proc_status", {}).get("NoNewPrivs") == "1"
+
+    routes = vantage.get("routes") or []
+    assert routes, "agent route table was not captured"
+    destinations = {row["destination"] for row in routes}
+    assert len(destinations) == 1, f"agent should hold one route, saw {destinations}"
+
+    targets = probe.get("targets") or {}
+    for name in ("credential-broker", "protected-tool", "control-plane"):
+        assert targets[name]["classification"] == "NETWORK_BLOCK"
+        assert targets[name]["ok"] is True
+    assert targets["enforcement-gateway"]["classification"] == "ALLOW"
+    assert targets["database"]["classification"] == "FILESYSTEM_BLOCK"
+    assert targets["in_process_import"]["ok"] is True

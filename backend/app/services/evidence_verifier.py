@@ -179,10 +179,21 @@ def assert_execution_evidence_integrity(
         if execution.evidence_chain_tip:
             raise EvidenceIntegrityError("evidence chain tip present but no events")
         return
-    sealed = bool(execution.evidence_chain_tip) or any(
-        event.evidence_hash for event in events
-    )
-    if not sealed:
+
+    # Phase 17. This used to read:
+    #
+    #     sealed = bool(chain_tip) or any(event.evidence_hash for event in events)
+    #     if not sealed:
+    #         return
+    #
+    # which meant an attacker who erased every evidence_hash and the chain tip
+    # turned the execution back into "not sealed yet" and the verifier passed.
+    # The chain detected modification but not deletion, so the cheapest attack
+    # was to remove the evidence rather than forge it. Events now must be
+    # sealed; an unsealed event in a stored execution is a tamper signal.
+    unsealed = [event for event in events if not event.evidence_hash]
+    if unsealed and config.EVIDENCE_ALLOW_UNSEALED:
+        # Explicit opt-in for reading a pre-Phase-15 database.
         return
     previous = GENESIS_EVIDENCE_HASH
     last_seq: Optional[int] = None

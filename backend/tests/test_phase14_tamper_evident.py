@@ -6,6 +6,8 @@ Does not claim L3/runtime isolation. Does not close F-13A-01..05 or F-13D-01.
 
 from __future__ import annotations
 
+import pytest
+
 import ast
 import inspect
 from pathlib import Path
@@ -345,12 +347,25 @@ def test_g_reconstruct_succeeds_after_all_tamper_classes():
     assert len(state.events) >= 2
 
 
-def test_h_forged_history_can_authorize_next_workflow_step():
+def test_h_forged_history_is_now_rejected():
+    """Phase 14 recorded this as an open weakness; Phase 17 closes it.
+
+    The original test asserted the finding of its own phase: an attacker who
+    inserted a fabricated prior step into an execution could unlock the next
+    workflow step, because nothing verified that the history was real. It was
+    named test_h_forged_history_can_authorize_next_workflow_step and it passed.
+
+    Forged history is unsealed history, and the evidence verifier no longer
+    accepts an execution whose events carry no hashes. The forged step is now
+    caught before it can authorize anything.
+    """
+    from app.services.evidence_verifier import EvidenceIntegrityError
+
     db = _db()
     save_contract(db, _contract())
     db.commit()
     execution = models.Execution(
-        id="exec-impact",
+        id="exec-forged-h",
         organization_id="org-1",
         agent_id="agent-1",
     )
@@ -367,34 +382,24 @@ def test_h_forged_history_can_authorize_next_workflow_step():
             payload_hash=_payload_digest({"id": "1", "name": "Ada"}),
             decision="ALLOW",
             reason="forged prior step",
-            request_id="forged-read",
+            request_id="forged-read-h",
         )
     )
     db.commit()
 
-    skipped = _authorize(
-        db,
-        _agent(db),
-        resource_kind="email",
-        action="SEND",
-        scope="internal",
-        destination="internal",
-        payload={"id": "1", "to": "ada@acme.test"},
-        execution_id="exec-missing",
-    )
-    assert skipped.event.decision == "BLOCK"
+    with pytest.raises(EvidenceIntegrityError) as caught:
+        _authorize(
+            db,
+            _agent(db),
+            resource_kind="email",
+            action="SEND",
+            scope="internal",
+            destination="internal",
+            payload={"id": "1", "to": "ada@acme.test"},
+            execution_id=execution.id,
+        )
+    assert caught.value.reason == "missing evidence hash"
 
-    nxt = _authorize(
-        db,
-        _agent(db),
-        resource_kind="email",
-        action="SEND",
-        scope="internal",
-        destination="internal",
-        payload={"id": "1", "to": "ada@acme.test"},
-        execution_id=execution.id,
-    )
-    assert nxt.event.decision == "ALLOW"
 
 
 def test_i_no_event_integrity_verifier_exists():

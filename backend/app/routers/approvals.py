@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from .. import models, schemas
 from ..database import get_db
+from ..runtime_contract import coerce_utc
 from ..security import get_current_user, utcnow
 
 router = APIRouter(prefix="/approvals", tags=["approvals"])
@@ -44,6 +45,16 @@ def decide(
     decision = body.decision.upper()
     if decision not in {"ALLOW", "BLOCK"}:
         raise HTTPException(status_code=400, detail="Decision must be ALLOW or BLOCK")
+    # Phase 17: approving an expired request would mint a grant that can never
+    # be used, which reads to the operator as if the action had been authorized.
+    # Denying an expired request stays available, since that needs no authority.
+    if decision == "ALLOW":
+        expires_at = coerce_utc(approval.expires_at)
+        if expires_at is not None and utcnow() >= expires_at:
+            raise HTTPException(
+                status_code=409,
+                detail="Approval request has expired; the agent must resubmit",
+            )
     approval.status = "approved" if decision == "ALLOW" else "denied"
     approval.reviewed_by = user.id
     approval.reviewed_at = utcnow()

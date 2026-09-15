@@ -700,7 +700,7 @@ def test_stale_contract_at_dispatch_blocks_execution(monolith, monkeypatch):
 
 
 def test_f13d01_nested_secret_still_rejected(monolith, marker_secret, monkeypatch):
-    def leak(operation, secret, *, scope, payload=None):
+    def leak(operation, secret, *, scope, payload=None, organization_id=None):
         return {"ok": True, "records": [{"note": marker_secret}]}
 
     monkeypatch.setattr(protected_crm, "execute", leak)
@@ -781,13 +781,35 @@ def test_verify_eat_never_returns_on_bad_input():
         verify_eat("aaaa.bbbb")
 
 
-def test_runtime_l3_not_claimed_without_docker():
-    if _docker_present():
-        pytest.fail(
-            "Docker present but Phase 13.F did not run live Agent-namespace "
-            "probes; do not mark L3 VERIFIED from pytest"
-        )
-    pytest.skip(
-        "RUNTIME VERIFICATION: NOT VERIFIED — Docker daemon absent; "
-        "fail-closed proven at application layer only"
+def test_runtime_l3_verified_when_stack_is_live():
+    """Phase 13.F's tripwire, discharged by Phase 17.
+
+    13.F proved fail-closed behaviour at the application layer only and refused
+    to let that be read as L3 proof. With a live stack the internal paths are
+    now observed directly, including the one that matters most for fail-closed
+    dispatch: the gateway cannot reach the protected tool, so it has no way to
+    execute except through the broker.
+    """
+    from .runtime_boundary import check_for, require_live_stack
+
+    evidence = require_live_stack()
+    assert evidence["status"] == "VERIFIED"
+
+    gateway_to_tool = check_for(
+        evidence, "aegis-enforcement-gateway", "aegis-protected-tool"
     )
+    assert gateway_to_tool["observed"] == "DENY"
+    assert gateway_to_tool["classification"] == "NETWORK_BLOCK"
+
+    gateway_to_broker = check_for(
+        evidence, "aegis-enforcement-gateway", "aegis-credential-broker"
+    )
+    assert gateway_to_broker["observed"] == "ALLOW"
+
+    broker_to_tool = check_for(
+        evidence, "aegis-credential-broker", "aegis-protected-tool"
+    )
+    assert broker_to_tool["observed"] == "ALLOW"
+
+    # No deny path in the live matrix may rest on application code alone.
+    assert evidence["summary"]["application_level_only"] == []

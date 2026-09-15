@@ -5,6 +5,7 @@ WORKDIR /agent
 COPY sdk/python /agent/sdk/python
 COPY demo-agent/agent.py /agent/agent.py
 COPY infra/agent/probe.py /agent/probe.py
+COPY infra/reference-agent/agent.py /agent/reference_agent.py
 
 RUN pip install --no-cache-dir --break-system-packages httpx \
     && useradd --uid 10001 --create-home --shell /usr/sbin/nologin aegis \

@@ -220,9 +220,79 @@ def seed_if_empty(db: Session) -> None:
         )
     )
 
+    # Phase 17: the demo agents get an ACTIVE runtime contract.
+    #
+    # Enforcement is fail-closed on a missing contract, so without this the
+    # seeded demo would deny everything. Only these two seeded agents are given
+    # a contract: an agent created later through /api/agents has none, and is
+    # correctly denied until an operator writes one.
+    _seed_demo_contracts(db, org.id, sales_agent.id, reader.id)
+
     db.commit()
     print(f"[aegis] seeded org=acme user={DEMO_EMAIL} password={DEMO_PASSWORD}")
     print(f"[aegis] sales copilot token written to /tmp/aegis_demo_token.txt")
+
+
+def _seed_demo_contracts(
+    db: Session, org_id: str, sales_agent_id: str, reader_agent_id: str
+) -> None:
+    """ACTIVE contracts for the two seeded demo agents.
+
+    The Sales Copilot contract deliberately spans the seven blueprint tools so
+    the demo's ALLOW / APPROVAL / BLOCK mix is still decided by policy: the
+    contract states what the agent is *for*, policy states what it may do right
+    now. The Research Reader contract is narrow on purpose, so the difference
+    between "permitted by policy" and "inside the contract" is visible.
+    """
+    from .contract_store import save_contract
+
+    save_contract(
+        db,
+        {
+            "organization_id": org_id,
+            "agent_id": sales_agent_id,
+            "contract_id": "sales-copilot",
+            "version": 1,
+            "status": "ACTIVE",
+            "purpose": "Sales assistant: read customer data, work sales files, send internal mail.",
+            "capabilities": [
+                {"name": "crm", "resource_kind": "crm", "actions": ["READ", "UPDATE", "DELETE"]},
+                {"name": "email", "resource_kind": "email", "actions": ["SEND"]},
+                {"name": "files", "resource_kind": "files", "actions": ["READ", "EXPORT"]},
+                {"name": "payments", "resource_kind": "payments", "actions": ["TRANSFER"]},
+            ],
+            "resources": [
+                {"kind": "crm", "scope": "*"},
+                {"kind": "email", "scope": "*"},
+                {"kind": "files", "scope": "*"},
+                {"kind": "payments", "scope": "*"},
+            ],
+            "constraints": {},
+            "data_constraints": {},
+            "approval_rules": [
+                {"resource_kind": "email", "action": "SEND", "require": "human"}
+            ],
+        },
+    )
+
+    save_contract(
+        db,
+        {
+            "organization_id": org_id,
+            "agent_id": reader_agent_id,
+            "contract_id": "research-reader",
+            "version": 1,
+            "status": "ACTIVE",
+            "purpose": "Least-privilege reader for sales files only.",
+            "capabilities": [
+                {"name": "files", "resource_kind": "files", "actions": ["READ"]}
+            ],
+            "resources": [{"kind": "files", "scope": "/Sales*"}],
+            "constraints": {},
+            "data_constraints": {},
+            "approval_rules": [],
+        },
+    )
 
 
 BUILTIN_PATTERNS = [

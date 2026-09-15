@@ -252,6 +252,15 @@ class ApprovalOut(BaseModel):
     reviewed_by: Optional[str]
     created_at: datetime
     reviewed_at: Optional[datetime]
+    # Phase 17 - the binding that makes this grant authorize one request, once.
+    execution_id: Optional[str] = None
+    request_id: Optional[str] = None
+    contract_id: Optional[str] = None
+    contract_version: Optional[int] = None
+    param_hash: Optional[str] = None
+    expires_at: Optional[datetime] = None
+    consumed_at: Optional[datetime] = None
+    consumed_event_id: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -375,3 +384,7 @@ class RuntimeContractOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class RuntimeContractStatusChange(BaseModel):
+    status: str

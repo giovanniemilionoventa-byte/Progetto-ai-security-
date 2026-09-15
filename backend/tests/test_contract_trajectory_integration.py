@@ -7,6 +7,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app import models, schemas
 from app.contract_store import save_contract, transition_contract_status
+from app.services.evidence_verifier import backfill_execution_evidence
 from app.database import Base
 from app.engines.enforcement import authorize_request
 from app.engines.trajectory import reconstruct_trajectory_state
@@ -374,6 +375,10 @@ def test_real_allow_satisfies_step():
                 request_id=str(uuid4()),
             )
         )
+    db.commit()
+    # Phase 17: hand-built history must be sealed like real history, otherwise
+    # the evidence verifier correctly treats it as tampered.
+    backfill_execution_evidence(db, "exec-1")
     db.commit()
     terminal = _authorize(db, _agent(db), **_send_internal(execution_id="exec-1"))
     assert terminal.event.decision == "ALLOW"

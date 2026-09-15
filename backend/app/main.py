@@ -12,12 +12,15 @@ from .routers import (
     auth,
     authorize,
     behavior_patterns,
+    contracts,
+    evidence,
     gateway,
     policies,
     resources,
 )
 from .routers import broker as broker_router
 from .routers import tool as tool_router
+from .security_posture import assert_secrets_configured, posture_report
 from .seed import seed_builtin_patterns, seed_if_empty
 
 CONTROL_ROUTERS = (
@@ -27,6 +30,8 @@ CONTROL_ROUTERS = (
     resources,
     approvals,
     behavior_patterns,
+    contracts,
+    evidence,
 )
 ENFORCEMENT_ROUTERS = (authorize, gateway)
 BROKER_ROUTERS = (broker_router,)
@@ -60,6 +65,7 @@ def create_app(role: str | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
+        assert_secrets_configured(selected)
         if _needs_database(selected):
             ensure_schema()
         if _needs_seed(selected):
@@ -120,7 +126,12 @@ def create_app(role: str | None = None) -> FastAPI:
 
     @application.get("/api/health")
     def health():
-        return {"status": "ok", "product": "aegis", "layer": health_layer}
+        return {
+            "status": "ok",
+            "product": "aegis",
+            "layer": health_layer,
+            "posture": posture_report(selected),
+        }
 
     return application
 

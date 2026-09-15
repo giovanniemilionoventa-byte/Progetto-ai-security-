@@ -25,7 +25,8 @@ services:
     environment:
       AEGIS_ROLE: control-plane
       AEGIS_DATABASE_URL: sqlite:////data/aegis.db
-      AEGIS_SECRET_KEY: ${AEGIS_SECRET_KEY:-aegis-dev-secret-change-in-production}
+      AEGIS_SECRET_KEY: ${AEGIS_SECRET_KEY:?Run scripts/init-env.sh to generate .env}
+      AEGIS_EVIDENCE_SECRET_KEY: ${AEGIS_EVIDENCE_SECRET_KEY:?Run scripts/init-env.sh to generate .env}
       AEGIS_DEMO_TOKEN_PATH: /data/demo_token.txt
     volumes:
       - aegis-data:/data
@@ -54,10 +55,11 @@ services:
     environment:
       AEGIS_ROLE: enforcement-gateway
       AEGIS_DATABASE_URL: sqlite:////data/aegis.db
-      AEGIS_SECRET_KEY: ${AEGIS_SECRET_KEY:-aegis-dev-secret-change-in-production}
-      AEGIS_EAT_KEY: ${AEGIS_EAT_KEY:-aegis-dev-eat-key-change-in-production}
+      AEGIS_SECRET_KEY: ${AEGIS_SECRET_KEY:?Run scripts/init-env.sh to generate .env}
+      AEGIS_EAT_KEY: ${AEGIS_EAT_KEY:?Run scripts/init-env.sh to generate .env}
+      AEGIS_EVIDENCE_SECRET_KEY: ${AEGIS_EVIDENCE_SECRET_KEY:?Run scripts/init-env.sh to generate .env}
       AEGIS_BROKER_URL: http://credential-broker:8000/api
-      AEGIS_INTERNAL_GATEWAY_TOKEN: ${AEGIS_INTERNAL_GATEWAY_TOKEN:-aegis-internal-gateway-token}
+      AEGIS_INTERNAL_GATEWAY_TOKEN: ${AEGIS_INTERNAL_GATEWAY_TOKEN:?Run scripts/init-env.sh to generate .env}
     volumes:
       - aegis-data:/data
     networks:
@@ -90,11 +92,11 @@ services:
     container_name: aegis-credential-broker
     environment:
       AEGIS_ROLE: credential-broker
-      AEGIS_EAT_KEY: ${AEGIS_EAT_KEY:-aegis-dev-eat-key-change-in-production}
-      AEGIS_INTERNAL_GATEWAY_TOKEN: ${AEGIS_INTERNAL_GATEWAY_TOKEN:-aegis-internal-gateway-token}
-      AEGIS_INTERNAL_TOOL_TOKEN: ${AEGIS_INTERNAL_TOOL_TOKEN:-aegis-internal-tool-token}
+      AEGIS_EAT_KEY: ${AEGIS_EAT_KEY:?Run scripts/init-env.sh to generate .env}
+      AEGIS_INTERNAL_GATEWAY_TOKEN: ${AEGIS_INTERNAL_GATEWAY_TOKEN:?Run scripts/init-env.sh to generate .env}
+      AEGIS_INTERNAL_TOOL_TOKEN: ${AEGIS_INTERNAL_TOOL_TOKEN:?Run scripts/init-env.sh to generate .env}
       AEGIS_TOOL_URL: http://protected-tool:8000/api
-      AEGIS_CRM_SECRET: ${AEGIS_CRM_SECRET:-change-me-crm-secret}
+      AEGIS_CRM_SECRET: ${AEGIS_CRM_SECRET:?Run scripts/init-env.sh to generate .env}
     networks:
       - broker_net
       - tool_net
@@ -107,8 +109,8 @@ services:
     container_name: aegis-protected-tool
     environment:
       AEGIS_ROLE: protected-tool
-      AEGIS_INTERNAL_TOOL_TOKEN: ${AEGIS_INTERNAL_TOOL_TOKEN:-aegis-internal-tool-token}
-      AEGIS_CRM_SECRET: ${AEGIS_CRM_SECRET:-change-me-crm-secret}
+      AEGIS_INTERNAL_TOOL_TOKEN: ${AEGIS_INTERNAL_TOOL_TOKEN:?Run scripts/init-env.sh to generate .env}
+      AEGIS_CRM_SECRET: ${AEGIS_CRM_SECRET:?Run scripts/init-env.sh to generate .env}
     networks:
       - tool_net
     restart: unless-stopped

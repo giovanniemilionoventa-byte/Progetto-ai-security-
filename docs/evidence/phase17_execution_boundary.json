@@ -1,0 +1,887 @@
+{
+  "agent_probe": {
+    "captured_at": "2026-09-15T18:49:40.728983+00:00",
+    "schema": "aegis.execution_boundary.evidence/v1",
+    "summary": {
+      "application_blocks": [],
+      "failed": [],
+      "network_blocks": [
+        "control-plane",
+        "credential-broker",
+        "protected-tool"
+      ],
+      "ok": 6,
+      "total": 6
+    },
+    "targets": {
+      "control-plane": {
+        "boundary_level": "NETWORK",
+        "by_ip": {
+          "172.18.0.2": {
+            "classification": "NETWORK_BLOCK",
+            "connected": false,
+            "dns_error": false,
+            "elapsed_ms": 0.05,
+            "errno": 101,
+            "errno_name": "ENETUNREACH",
+            "error": "[Errno 101] Network is unreachable",
+            "host": "172.18.0.2",
+            "http_status": null,
+            "port": 8000,
+            "resolved_to": [
+              "172.18.0.2"
+            ]
+          }
+        },
+        "by_name": {
+          "classification": "DNS_BLOCK",
+          "connected": false,
+          "dns_error": true,
+          "elapsed_ms": 0.59,
+          "errno": null,
+          "errno_name": null,
+          "error": "getaddrinfo: [Errno -3] Temporary failure in name resolution",
+          "host": "control-plane",
+          "http_status": null,
+          "port": 8000,
+          "resolved_to": null
+        },
+        "classification": "NETWORK_BLOCK",
+        "expected": "DENY",
+        "http_status": null,
+        "ok": true,
+        "reachable": false,
+        "target": "control-plane:8000",
+        "target_ips": [
+          "172.18.0.2"
+        ],
+        "verdict": "DENY"
+      },
+      "credential-broker": {
+        "boundary_level": "NETWORK",
+        "by_ip": {
+          "172.19.0.2": {
+            "classification": "NETWORK_BLOCK",
+            "connected": false,
+            "dns_error": false,
+            "elapsed_ms": 0.03,
+            "errno": 101,
+            "errno_name": "ENETUNREACH",
+            "error": "[Errno 101] Network is unreachable",
+            "host": "172.19.0.2",
+            "http_status": null,
+            "port": 8000,
+            "resolved_to": [
+              "172.19.0.2"
+            ]
+          },
+          "172.20.0.3": {
+            "classification": "NETWORK_BLOCK",
+            "connected": false,
+            "dns_error": false,
+            "elapsed_ms": 0.02,
+            "errno": 101,
+            "errno_name": "ENETUNREACH",
+            "error": "[Errno 101] Network is unreachable",
+            "host": "172.20.0.3",
+            "http_status": null,
+            "port": 8000,
+            "resolved_to": [
+              "172.20.0.3"
+            ]
+          }
+        },
+        "by_name": {
+          "classification": "DNS_BLOCK",
+          "connected": false,
+          "dns_error": true,
+          "elapsed_ms": 0.49,
+          "errno": null,
+          "errno_name": null,
+          "error": "getaddrinfo: [Errno -3] Temporary failure in name resolution",
+          "host": "credential-broker",
+          "http_status": null,
+          "port": 8000,
+          "resolved_to": null
+        },
+        "classification": "NETWORK_BLOCK",
+        "expected": "DENY",
+        "http_status": null,
+        "ok": true,
+        "reachable": false,
+        "target": "credential-broker:8000",
+        "target_ips": [
+          "172.19.0.2",
+          "172.20.0.3"
+        ],
+        "verdict": "DENY"
+      },
+      "database": {
+        "aegis_related_mounts": [],
+        "classification": "FILESYSTEM_BLOCK",
+        "expected": "DENY",
+        "ok": true,
+        "paths": {
+          "./aegis.db": {
+            "exists": false,
+            "readable": false
+          },
+          "/app/aegis.db": {
+            "exists": false,
+            "readable": false
+          },
+          "/data": {
+            "exists": false,
+            "readable": false
+          },
+          "/data/aegis.db": {
+            "exists": false,
+            "readable": false
+          }
+        },
+        "target": "sqlite volume aegis-data",
+        "transport": "filesystem (not a network service)",
+        "verdict": "DENY"
+      },
+      "enforcement-gateway": {
+        "boundary_level": "NONE",
+        "by_ip": {
+          "172.19.0.3": {
+            "classification": "NETWORK_BLOCK",
+            "connected": false,
+            "dns_error": false,
+            "elapsed_ms": 0.05,
+            "errno": 101,
+            "errno_name": "ENETUNREACH",
+            "error": "[Errno 101] Network is unreachable",
+            "host": "172.19.0.3",
+            "http_status": null,
+            "port": 8000,
+            "resolved_to": [
+              "172.19.0.3"
+            ]
+          },
+          "172.21.0.2": {
+            "classification": "ALLOW",
+            "connected": true,
+            "dns_error": false,
+            "elapsed_ms": 0.1,
+            "errno": null,
+            "errno_name": null,
+            "error": null,
+            "host": "172.21.0.2",
+            "http_status": 200,
+            "port": 8000,
+            "resolved_to": [
+              "172.21.0.2"
+            ]
+          }
+        },
+        "by_name": {
+          "classification": "ALLOW",
+          "connected": true,
+          "dns_error": false,
+          "elapsed_ms": 1.78,
+          "errno": null,
+          "errno_name": null,
+          "error": null,
+          "host": "enforcement-gateway",
+          "http_status": 200,
+          "port": 8000,
+          "resolved_to": [
+            "172.21.0.2"
+          ]
+        },
+        "classification": "ALLOW",
+        "expected": "ALLOW",
+        "http_status": 200,
+        "ok": true,
+        "reachable": true,
+        "target": "enforcement-gateway:8000",
+        "target_ips": [
+          "172.19.0.3",
+          "172.21.0.2"
+        ],
+        "verdict": "ALLOW"
+      },
+      "in_process_import": {
+        "classification": "IMPORT_BLOCK",
+        "expected": false,
+        "imported": false,
+        "ok": true
+      },
+      "protected-tool": {
+        "boundary_level": "NETWORK",
+        "by_ip": {
+          "172.20.0.2": {
+            "classification": "NETWORK_BLOCK",
+            "connected": false,
+            "dns_error": false,
+            "elapsed_ms": 0.03,
+            "errno": 101,
+            "errno_name": "ENETUNREACH",
+            "error": "[Errno 101] Network is unreachable",
+            "host": "172.20.0.2",
+            "http_status": null,
+            "port": 8000,
+            "resolved_to": [
+              "172.20.0.2"
+            ]
+          }
+        },
+        "by_name": {
+          "classification": "DNS_BLOCK",
+          "connected": false,
+          "dns_error": true,
+          "elapsed_ms": 0.39,
+          "errno": null,
+          "errno_name": null,
+          "error": "getaddrinfo: [Errno -3] Temporary failure in name resolution",
+          "host": "protected-tool",
+          "http_status": null,
+          "port": 8000,
+          "resolved_to": null
+        },
+        "classification": "NETWORK_BLOCK",
+        "expected": "DENY",
+        "http_status": null,
+        "ok": true,
+        "reachable": false,
+        "target": "protected-tool:8000",
+        "target_ips": [
+          "172.20.0.2"
+        ],
+        "verdict": "DENY"
+      }
+    },
+    "vantage": {
+      "addresses": [
+        "eth0"
+      ],
+      "container_id_hint": "40f6dca02aab\n",
+      "gid": 10001,
+      "hostname": "40f6dca02aab",
+      "probe_timeout_seconds": 4.0,
+      "proc_status": {
+        "CapBnd": "0000000000000000",
+        "CapEff": "0000000000000000",
+        "CapPrm": "0000000000000000",
+        "Gid": "10001\t10001\t10001\t10001",
+        "NoNewPrivs": "1",
+        "Seccomp": "2",
+        "Uid": "10001\t10001\t10001\t10001"
+      },
+      "routes": [
+        {
+          "destination": "172.21.0.0",
+          "gateway": "0.0.0.0",
+          "iface": "eth0",
+          "mask": "255.255.0.0"
+        }
+      ],
+      "uid": 10001
+    }
+  },
+  "captured_at": "2026-09-15T18:49:40.740290+00:00",
+  "checks": [
+    {
+      "boundary_level": "NONE",
+      "by_ip": {
+        "aegis_agent_net:172.21.0.2": {
+          "classification": "ALLOW",
+          "connected": true,
+          "dns_error": false,
+          "elapsed_ms": 1.39,
+          "errno": null,
+          "errno_name": null,
+          "error": null,
+          "host": "172.21.0.2",
+          "port": 8000,
+          "resolved_to": [
+            "172.21.0.2"
+          ]
+        },
+        "aegis_broker_net:172.19.0.3": {
+          "classification": "NETWORK_BLOCK",
+          "connected": false,
+          "dns_error": false,
+          "elapsed_ms": 1.18,
+          "errno": 101,
+          "errno_name": "ENETUNREACH",
+          "error": "[Errno 101] Network is unreachable",
+          "host": "172.19.0.3",
+          "port": 8000,
+          "resolved_to": [
+            "172.19.0.3"
+          ]
+        }
+      },
+      "by_name": {
+        "classification": "ALLOW",
+        "connected": true,
+        "dns_error": false,
+        "elapsed_ms": 2.57,
+        "errno": null,
+        "errno_name": null,
+        "error": null,
+        "host": "enforcement-gateway",
+        "port": 8000,
+        "resolved_to": [
+          "172.21.0.2"
+        ]
+      },
+      "classification": "ALLOW",
+      "destination": "aegis-enforcement-gateway",
+      "destination_ips": {
+        "aegis_agent_net": "172.21.0.2",
+        "aegis_broker_net": "172.19.0.3"
+      },
+      "destination_service": "enforcement-gateway",
+      "expected": "ALLOW",
+      "observed": "ALLOW",
+      "ok": true,
+      "rationale": "the only door the agent may use",
+      "source": "aegis-agent",
+      "source_networks": {
+        "aegis_agent_net": "172.21.0.3"
+      }
+    },
+    {
+      "boundary_level": "NETWORK",
+      "by_ip": {
+        "aegis_broker_net:172.19.0.2": {
+          "classification": "NETWORK_BLOCK",
+          "connected": false,
+          "dns_error": false,
+          "elapsed_ms": 1.28,
+          "errno": 101,
+          "errno_name": "ENETUNREACH",
+          "error": "[Errno 101] Network is unreachable",
+          "host": "172.19.0.2",
+          "port": 8000,
+          "resolved_to": [
+            "172.19.0.2"
+          ]
+        },
+        "aegis_tool_net:172.20.0.3": {
+          "classification": "NETWORK_BLOCK",
+          "connected": false,
+          "dns_error": false,
+          "elapsed_ms": 1.22,
+          "errno": 101,
+          "errno_name": "ENETUNREACH",
+          "error": "[Errno 101] Network is unreachable",
+          "host": "172.20.0.3",
+          "port": 8000,
+          "resolved_to": [
+            "172.20.0.3"
+          ]
+        }
+      },
+      "by_name": {
+        "classification": "DNS_BLOCK",
+        "connected": false,
+        "dns_error": true,
+        "elapsed_ms": 2.14,
+        "errno": null,
+        "errno_name": null,
+        "error": "getaddrinfo: [Errno -3] Temporary failure in name resolution",
+        "host": "credential-broker",
+        "port": 8000,
+        "resolved_to": null
+      },
+      "classification": "NETWORK_BLOCK",
+      "destination": "aegis-credential-broker",
+      "destination_ips": {
+        "aegis_broker_net": "172.19.0.2",
+        "aegis_tool_net": "172.20.0.3"
+      },
+      "destination_service": "credential-broker",
+      "expected": "DENY",
+      "observed": "DENY",
+      "ok": true,
+      "rationale": "agent must never reach the broker",
+      "source": "aegis-agent",
+      "source_networks": {
+        "aegis_agent_net": "172.21.0.3"
+      }
+    },
+    {
+      "boundary_level": "NETWORK",
+      "by_ip": {
+        "aegis_tool_net:172.20.0.2": {
+          "classification": "NETWORK_BLOCK",
+          "connected": false,
+          "dns_error": false,
+          "elapsed_ms": 1.14,
+          "errno": 101,
+          "errno_name": "ENETUNREACH",
+          "error": "[Errno 101] Network is unreachable",
+          "host": "172.20.0.2",
+          "port": 8000,
+          "resolved_to": [
+            "172.20.0.2"
+          ]
+        }
+      },
+      "by_name": {
+        "classification": "DNS_BLOCK",
+        "connected": false,
+        "dns_error": true,
+        "elapsed_ms": 2.06,
+        "errno": null,
+        "errno_name": null,
+        "error": "getaddrinfo: [Errno -3] Temporary failure in name resolution",
+        "host": "protected-tool",
+        "port": 8000,
+        "resolved_to": null
+      },
+      "classification": "NETWORK_BLOCK",
+      "destination": "aegis-protected-tool",
+      "destination_ips": {
+        "aegis_tool_net": "172.20.0.2"
+      },
+      "destination_service": "protected-tool",
+      "expected": "DENY",
+      "observed": "DENY",
+      "ok": true,
+      "rationale": "agent must never reach the tool directly",
+      "source": "aegis-agent",
+      "source_networks": {
+        "aegis_agent_net": "172.21.0.3"
+      }
+    },
+    {
+      "boundary_level": "NETWORK",
+      "by_ip": {
+        "aegis_public_net:172.18.0.2": {
+          "classification": "NETWORK_BLOCK",
+          "connected": false,
+          "dns_error": false,
+          "elapsed_ms": 1.15,
+          "errno": 101,
+          "errno_name": "ENETUNREACH",
+          "error": "[Errno 101] Network is unreachable",
+          "host": "172.18.0.2",
+          "port": 8000,
+          "resolved_to": [
+            "172.18.0.2"
+          ]
+        }
+      },
+      "by_name": {
+        "classification": "DNS_BLOCK",
+        "connected": false,
+        "dns_error": true,
+        "elapsed_ms": 2.02,
+        "errno": null,
+        "errno_name": null,
+        "error": "getaddrinfo: [Errno -3] Temporary failure in name resolution",
+        "host": "control-plane",
+        "port": 8000,
+        "resolved_to": null
+      },
+      "classification": "NETWORK_BLOCK",
+      "destination": "aegis-control-plane",
+      "destination_ips": {
+        "aegis_public_net": "172.18.0.2"
+      },
+      "destination_service": "control-plane",
+      "expected": "DENY",
+      "observed": "DENY",
+      "ok": true,
+      "rationale": "agent must never reach the control plane",
+      "source": "aegis-agent",
+      "source_networks": {
+        "aegis_agent_net": "172.21.0.3"
+      }
+    },
+    {
+      "boundary_level": "NONE",
+      "by_ip": {
+        "aegis_broker_net:172.19.0.2": {
+          "classification": "ALLOW",
+          "connected": true,
+          "dns_error": false,
+          "elapsed_ms": 1.44,
+          "errno": null,
+          "errno_name": null,
+          "error": null,
+          "host": "172.19.0.2",
+          "port": 8000,
+          "resolved_to": [
+            "172.19.0.2"
+          ]
+        },
+        "aegis_tool_net:172.20.0.3": {
+          "classification": "NETWORK_BLOCK",
+          "connected": false,
+          "dns_error": false,
+          "elapsed_ms": 1.97,
+          "errno": 101,
+          "errno_name": "ENETUNREACH",
+          "error": "[Errno 101] Network is unreachable",
+          "host": "172.20.0.3",
+          "port": 8000,
+          "resolved_to": [
+            "172.20.0.3"
+          ]
+        }
+      },
+      "by_name": {
+        "classification": "ALLOW",
+        "connected": true,
+        "dns_error": false,
+        "elapsed_ms": 2.36,
+        "errno": null,
+        "errno_name": null,
+        "error": null,
+        "host": "credential-broker",
+        "port": 8000,
+        "resolved_to": [
+          "172.19.0.2"
+        ]
+      },
+      "classification": "ALLOW",
+      "destination": "aegis-credential-broker",
+      "destination_ips": {
+        "aegis_broker_net": "172.19.0.2",
+        "aegis_tool_net": "172.20.0.3"
+      },
+      "destination_service": "credential-broker",
+      "expected": "ALLOW",
+      "observed": "ALLOW",
+      "ok": true,
+      "rationale": "gateway dispatches through the broker",
+      "source": "aegis-enforcement-gateway",
+      "source_networks": {
+        "aegis_agent_net": "172.21.0.2",
+        "aegis_broker_net": "172.19.0.3"
+      }
+    },
+    {
+      "boundary_level": "NETWORK",
+      "by_ip": {
+        "aegis_tool_net:172.20.0.2": {
+          "classification": "NETWORK_BLOCK",
+          "connected": false,
+          "dns_error": false,
+          "elapsed_ms": 1.45,
+          "errno": 101,
+          "errno_name": "ENETUNREACH",
+          "error": "[Errno 101] Network is unreachable",
+          "host": "172.20.0.2",
+          "port": 8000,
+          "resolved_to": [
+            "172.20.0.2"
+          ]
+        }
+      },
+      "by_name": {
+        "classification": "DNS_BLOCK",
+        "connected": false,
+        "dns_error": true,
+        "elapsed_ms": 2.01,
+        "errno": null,
+        "errno_name": null,
+        "error": "getaddrinfo: [Errno -3] Temporary failure in name resolution",
+        "host": "protected-tool",
+        "port": 8000,
+        "resolved_to": null
+      },
+      "classification": "NETWORK_BLOCK",
+      "destination": "aegis-protected-tool",
+      "destination_ips": {
+        "aegis_tool_net": "172.20.0.2"
+      },
+      "destination_service": "protected-tool",
+      "expected": "DENY",
+      "observed": "DENY",
+      "ok": true,
+      "rationale": "gateway must not bypass the broker",
+      "source": "aegis-enforcement-gateway",
+      "source_networks": {
+        "aegis_agent_net": "172.21.0.2",
+        "aegis_broker_net": "172.19.0.3"
+      }
+    },
+    {
+      "boundary_level": "NONE",
+      "by_ip": {
+        "aegis_tool_net:172.20.0.2": {
+          "classification": "ALLOW",
+          "connected": true,
+          "dns_error": false,
+          "elapsed_ms": 1.43,
+          "errno": null,
+          "errno_name": null,
+          "error": null,
+          "host": "172.20.0.2",
+          "port": 8000,
+          "resolved_to": [
+            "172.20.0.2"
+          ]
+        }
+      },
+      "by_name": {
+        "classification": "ALLOW",
+        "connected": true,
+        "dns_error": false,
+        "elapsed_ms": 1.8,
+        "errno": null,
+        "errno_name": null,
+        "error": null,
+        "host": "protected-tool",
+        "port": 8000,
+        "resolved_to": [
+          "172.20.0.2"
+        ]
+      },
+      "classification": "ALLOW",
+      "destination": "aegis-protected-tool",
+      "destination_ips": {
+        "aegis_tool_net": "172.20.0.2"
+      },
+      "destination_service": "protected-tool",
+      "expected": "ALLOW",
+      "observed": "ALLOW",
+      "ok": true,
+      "rationale": "broker executes against the tool",
+      "source": "aegis-credential-broker",
+      "source_networks": {
+        "aegis_broker_net": "172.19.0.2",
+        "aegis_tool_net": "172.20.0.3"
+      }
+    },
+    {
+      "boundary_level": "NETWORK",
+      "by_ip": {
+        "aegis_public_net:172.18.0.2": {
+          "classification": "NETWORK_BLOCK",
+          "connected": false,
+          "dns_error": false,
+          "elapsed_ms": 1.33,
+          "errno": 101,
+          "errno_name": "ENETUNREACH",
+          "error": "[Errno 101] Network is unreachable",
+          "host": "172.18.0.2",
+          "port": 8000,
+          "resolved_to": [
+            "172.18.0.2"
+          ]
+        }
+      },
+      "by_name": {
+        "classification": "DNS_BLOCK",
+        "connected": false,
+        "dns_error": true,
+        "elapsed_ms": 2.17,
+        "errno": null,
+        "errno_name": null,
+        "error": "getaddrinfo: [Errno -3] Temporary failure in name resolution",
+        "host": "control-plane",
+        "port": 8000,
+        "resolved_to": null
+      },
+      "classification": "NETWORK_BLOCK",
+      "destination": "aegis-control-plane",
+      "destination_ips": {
+        "aegis_public_net": "172.18.0.2"
+      },
+      "destination_service": "control-plane",
+      "expected": "DENY",
+      "observed": "DENY",
+      "ok": true,
+      "rationale": "broker has no control-plane access",
+      "source": "aegis-credential-broker",
+      "source_networks": {
+        "aegis_broker_net": "172.19.0.2",
+        "aegis_tool_net": "172.20.0.3"
+      }
+    }
+  ],
+  "database_checks": [
+    {
+      "destination": "sqlite volume aegis-data",
+      "evidence": {
+        "aegis_related_mounts": [],
+        "classification": "FILESYSTEM_BLOCK",
+        "paths": {
+          "/data": {
+            "exists": false,
+            "readable": false
+          },
+          "/data/aegis.db": {
+            "exists": false,
+            "readable": false
+          }
+        },
+        "verdict": "DENY"
+      },
+      "expected": "DENY",
+      "observed": "DENY",
+      "ok": true,
+      "rationale": "agent has no aegis-data volume",
+      "source": "aegis-agent",
+      "transport": "filesystem"
+    },
+    {
+      "destination": "sqlite volume aegis-data",
+      "evidence": {
+        "aegis_related_mounts": [],
+        "classification": "FILESYSTEM_BLOCK",
+        "paths": {
+          "/data": {
+            "exists": false,
+            "readable": false
+          },
+          "/data/aegis.db": {
+            "exists": false,
+            "readable": false
+          }
+        },
+        "verdict": "DENY"
+      },
+      "expected": "DENY",
+      "observed": "DENY",
+      "ok": true,
+      "rationale": "broker has no aegis-data volume",
+      "source": "aegis-credential-broker",
+      "transport": "filesystem"
+    },
+    {
+      "destination": "sqlite volume aegis-data",
+      "evidence": {
+        "aegis_related_mounts": [],
+        "classification": "FILESYSTEM_BLOCK",
+        "paths": {
+          "/data": {
+            "exists": false,
+            "readable": false
+          },
+          "/data/aegis.db": {
+            "exists": false,
+            "readable": false
+          }
+        },
+        "verdict": "DENY"
+      },
+      "expected": "DENY",
+      "observed": "DENY",
+      "ok": true,
+      "rationale": "protected tool has no aegis-data volume",
+      "source": "aegis-protected-tool",
+      "transport": "filesystem"
+    },
+    {
+      "destination": "sqlite volume aegis-data",
+      "evidence": {
+        "aegis_related_mounts": [
+          "/dev/vda /data ext4 rw,relatime,resv_strict,resuid=65534,resgid=65534 0 0"
+        ],
+        "classification": "FILESYSTEM_ALLOW",
+        "paths": {
+          "/data": {
+            "exists": true,
+            "readable": true
+          },
+          "/data/aegis.db": {
+            "exists": true,
+            "readable": true
+          }
+        },
+        "verdict": "ALLOW"
+      },
+      "expected": "ALLOW",
+      "observed": "ALLOW",
+      "ok": true,
+      "rationale": "control plane legitimately owns the database",
+      "source": "aegis-control-plane",
+      "transport": "filesystem"
+    },
+    {
+      "destination": "sqlite volume aegis-data",
+      "evidence": {
+        "aegis_related_mounts": [
+          "/dev/vda /data ext4 rw,relatime,resv_strict,resuid=65534,resgid=65534 0 0"
+        ],
+        "classification": "FILESYSTEM_ALLOW",
+        "paths": {
+          "/data": {
+            "exists": true,
+            "readable": true
+          },
+          "/data/aegis.db": {
+            "exists": true,
+            "readable": true
+          }
+        },
+        "verdict": "ALLOW"
+      },
+      "expected": "ALLOW",
+      "observed": "ALLOW",
+      "ok": true,
+      "rationale": "gateway shares the database (known Phase 10 limitation)",
+      "source": "aegis-enforcement-gateway",
+      "transport": "filesystem"
+    }
+  ],
+  "docker_server_version": "29.3.1",
+  "host_published_ports": {
+    "aegis-agent": [],
+    "aegis-control-plane": [
+      "8000/tcp -> 0.0.0.0:8000"
+    ],
+    "aegis-credential-broker": [],
+    "aegis-enforcement-gateway": [],
+    "aegis-protected-tool": []
+  },
+  "schema": "aegis.execution_boundary.proof/v1",
+  "status": "VERIFIED",
+  "summary": {
+    "application_level_only": [],
+    "failed": [],
+    "network_level_blocks": [
+      "aegis-agent -> aegis-control-plane",
+      "aegis-agent -> aegis-credential-broker",
+      "aegis-agent -> aegis-protected-tool",
+      "aegis-credential-broker -> aegis-control-plane",
+      "aegis-enforcement-gateway -> aegis-protected-tool"
+    ],
+    "passed": 13,
+    "total": 13
+  },
+  "topology": {
+    "aegis_agent_net": {
+      "attached": [
+        "aegis-enforcement-gateway",
+        "aegis-agent"
+      ],
+      "internal": true,
+      "subnet": "172.21.0.0/16"
+    },
+    "aegis_broker_net": {
+      "attached": [
+        "aegis-credential-broker",
+        "aegis-enforcement-gateway"
+      ],
+      "internal": true,
+      "subnet": "172.19.0.0/16"
+    },
+    "aegis_public_net": {
+      "attached": [
+        "aegis-control-plane"
+      ],
+      "internal": false,
+      "subnet": "172.18.0.0/16"
+    },
+    "aegis_tool_net": {
+      "attached": [
+        "aegis-credential-broker",
+        "aegis-protected-tool"
+      ],
+      "internal": true,
+      "subnet": "172.20.0.0/16"
+    }
+  }
+}
